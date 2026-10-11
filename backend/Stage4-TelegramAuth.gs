@@ -40,15 +40,15 @@ function telegramAuthBridgeHtml_() {
       'typeof message.requestId!=="string"||' +
       '!/^[a-zA-Z0-9_-]{16,64}$/.test(message.requestId))return;' +
       'google.script.run.withSuccessHandler(function(result){' +
-        'window.parent.postMessage({type:"quizAuthResult",' +
+        'window.top.postMessage({type:"quizAuthResult",' +
           'requestId:message.requestId,result:result},event.origin);' +
       '}).withFailureHandler(function(){' +
-        'window.parent.postMessage({type:"quizAuthResult",' +
+        'window.top.postMessage({type:"quizAuthResult",' +
           'requestId:message.requestId,result:{ok:false,error:"Сбой GAS"}},event.origin);' +
       '}).bridgeWhoAmI(message.initData);' +
     '});' +
     'allowedOrigins.forEach(function(origin){' +
-      'window.parent.postMessage({type:"quizAuthReady"},origin);' +
+      'window.top.postMessage({type:"quizAuthReady"},origin);' +
     '});' +
     '</script></body></html>';
 }
