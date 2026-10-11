@@ -489,14 +489,37 @@ async function checkSubscription(){
     button.disabled=false;
   }
 }
-function shareResult(){
-  if(!currentState?.complete)return;
-  const score=Number(currentState.score)||0;
-  const message="Я набрал "+score+" из 6 в тесте вы́Читать по русскому языку. А ты справишься лучше? Открой бота и выбери «Пройти тест» в меню.";
-  const share="https://t.me/share/url?url="+
-    encodeURIComponent("https://t.me/posttsop_test_bot")+
-    "&text="+encodeURIComponent(message);
-  openTelegram(share);
+async function shareResult(){
+  if(!currentState?.complete || requestBusy)return;
+  const button=el("share-result-btn");
+  const label=button.textContent;
+  requestBusy=true;
+  button.disabled=true;
+  button.textContent="Готовлю сообщение…";
+  try{
+    if(typeof telegram?.shareMessage==="function"){
+      const prepared=await call("share");
+      if(prepared?.shareId){
+        telegram.shareMessage(prepared.shareId);
+        return;
+      }
+    }
+    throw new Error("Нативное меню недоступно");
+  }catch(_){
+    // Старый Telegram: ссылки будут видны как URL — share/url не поддерживает
+    // встроенные ссылки, используем его только как резервный вариант.
+    const score=Number(currentState.score)||0;
+    const message="Я набрал "+score+" из 6 в тесте канала вы́Читать по русскому языку.\n"+
+      "Канал: https://t.me/posttsop\nА ты справишься лучше?";
+    const share="https://t.me/share/url?url="+
+      encodeURIComponent("https://t.me/posttsop_test_bot?start=quiz")+
+      "&text="+encodeURIComponent(message);
+    openTelegram(share);
+  }finally{
+    requestBusy=false;
+    button.disabled=false;
+    button.textContent=label;
+  }
 }
 el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
 el("check-subscription-btn").addEventListener("click",checkSubscription);
