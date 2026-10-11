@@ -1,18 +1,23 @@
 /**
- * вы́Читать Mini App: ЭТАП 6 — закрытый пилот с серверным таймером.
+ * вы́Читать Mini App: RELEASE CANDIDATE — общий выпуск из шести вопросов.
  * Код только для ОТДЕЛЬНОГО проекта GAS «Вычитать — Mini App».
  * НЕ вставлять в проект работающего Telegram-бота.
  *
  * Script Properties:
  *   BOT_TOKEN       уже указан (действующий бот);
  *   QUIZ_SHEET_ID   уже указан (таблица «вычитать_Русский язык»);
- *   TEST_CHAT_ID    уже указан (администратор).
+ *   TEST_CHAT_ID    уже указан (администратор);
+ *   MINI_WEBAPP_URL адрес GAS /exec (для кнопки в Telegram);
+ *   MINI_ACCESS_MODE pilot (по умолчанию) / public (после проверки).
  *
- * Создаёт ТОЛЬКО новые листы «Мини_Выпуски», «Мини_Участники»,
- * «Мини_Ответы». Не изменяет старые «Вопросы», «Отправки», «Участники», «Итоги».
+ * Читает вопросы из «Мини_Вопросы» (A–Q), записи хранит в «Мини_Выпуски»,
+ * «Мини_Участники», «Мини_Ответы», «Мини_Таймеры».
+ * Старые листы «Вопросы», «Отправки», «Участники», «Итоги» не меняет.
  * Реальные ответы проверяет сервер; публичные JS и HTML НЕ содержат ключей.
  *
- * ВАЖНО: это пилот без массовых рассылок; полноценная рассылка будет этапом 6.
+ * Мини-приложение может работать в режимах pilot (по умолчанию) и public.
+ * Вечерних рассылок нет: после 19:00 МСК статистика видна при открытии
+ * завершённого теста, а администратор публикует итоги самостоятельно.
  */
 
 const MAX_INITDATA_LENGTH = 12000;
@@ -81,8 +86,8 @@ function miniRequireOwnerRun_() {
 }
 
 /**
- * Подготовка только структуры: новый лист «Мини_Таймеры» и колонка К
- * исходного листа «Вопросы». Старые ответы не стираются.
+ * Проверяет структуру отдельного листа «Мини_Вопросы» A–Q.
+ * Старые ответы и исходный лист «Вопросы» не затрагиваются.
  */
 function miniCheckQuestionHeaders_() {
   const questionSheet = miniSheetFile_().getSheetByName(MINI.questionSheet);
@@ -125,7 +130,9 @@ function setupMiniTimedPilot() {
 }
 
 /**
- * Создаёт новый пилотный выпуск на основе текущих вопросов и времени в К.
+ * Создаёт новый выпуск из всех шести вопросов «Мини_Вопросы».
+ * Время колонки B не учитывается: все вопросы доступны сразу.
+ * Время таймера берётся из колонки Q (пусто = 60 секунд).
  * Не запускай повторно без необходимости: каждый запуск — новый выпуск.
  */
 function startNewTimedPilot() {
@@ -148,7 +155,7 @@ function startNewTimedPilot() {
     miniAppend_(MINI.runSheet,[runId, now, statsAt, "ACTIVE", JSON.stringify(questions)]);
     miniProps_().setProperty("MINI_ACTIVE_RUN", runId);
     SpreadsheetApp.flush();
-    console.log("PASS: новый выпуск с таймером создан. Старый выпуск и его ответы сохранены.");
+    console.log("PASS: новый выпуск из 6 вопросов создан. Статистика после 19:00 МСК; история сохранена.");
   } finally { lock.releaseLock(); }
 }
 
@@ -238,9 +245,16 @@ function miniApi(action, initData, payload) {
     const token = miniProps_().getProperty("BOT_TOKEN");
     if (!token) throw new Error("Не указан BOT_TOKEN");
     const person = verifyTelegramInitData_(initData, token, Math.floor(Date.now() / 1000));
-    // ПИЛОТ: разрешён только TEST_CHAT_ID. Перед массовым запуском заменим это правило.
-    if (String(person.id) !== String(miniProps_().getProperty("TEST_CHAT_ID"))) {
-      return {ok: false, error: "Пилот доступен только администратору."};
+    // Режим PUBLIC нужно включить явно через Script Properties перед запуском.
+    // В режиме PILOT доступен только владелец; старый бот не затрагиваем.
+    const accessMode = String(miniProps_().getProperty("MINI_ACCESS_MODE") ||
+      "pilot").toLowerCase().trim();
+    if (accessMode !== "pilot" && accessMode !== "public") {
+      return {ok:false,error:"Неверно настроен режим доступа Mini App."};
+    }
+    if (accessMode === "pilot" &&
+        String(person.id) !== String(miniProps_().getProperty("TEST_CHAT_ID"))) {
+      return {ok: false, error: "Сейчас тест доступен только администратору."};
     }
     if (action === "state") return miniStateFor_(person);
     if (action === "open") return miniOpenFor_(person);
@@ -352,11 +366,17 @@ function miniBuildState_(run, user) {
     ok: true,
     userName: String(user.first_name || "Участник").slice(0, 80),
     runId: run.id,
-    questions: run.questions.map(q => ({
-      id: q.id, text: q.text, description: q.description,
-      options: q.options, multiple: q.correct.length > 1,
-      timeSeconds: q.timeSeconds || 60
-    })),
+    // Будущие вопросы не раскрываем до запуска их таймера.
+    // Уже пройденные вопросы и открытый текущий вопрос доступны клиенту.
+    // Массив имеет 6 позиций: закрытые будущие вопросы = null.
+    questions: run.questions.map((q, index) => {
+      if (index > rows.length || (index === rows.length && !clock)) return null;
+      return {
+        id: q.id, text: q.text, description: q.description,
+        options: q.options, multiple: q.correct.length > 1,
+        timeSeconds: q.timeSeconds || 60
+      };
+    }),
     answers: answers,
     activeTimer: clock ? {
       questionId: nextQuestion.id,
@@ -414,11 +434,22 @@ function miniAnswerFor_(user, payload) {
 }
 
 function miniStatistics_(run) {
-  const data = miniRows_(MINI.answersSheet).filter(r => r.v[0] === run.id);
+  // Учитываем только первый ответ пользователя на вопрос, чтобы повторные
+  // сетевые запросы не искажали публичную и административную статистику.
+  const data = miniRows_(MINI.answersSheet);
+  const byQuestion = new Map(run.questions.map(q => [Number(q.id), new Map()]));
+  data.forEach(entry => {
+    const r = entry.v;
+    if (String(r[0]) !== run.id) return;
+    const group = byQuestion.get(Number(r[2]));
+    if (!group) return;
+    const uid = String(r[1]);
+    if (!group.has(uid)) group.set(uid,
+      r[4] === true || String(r[4]).toUpperCase() === "TRUE");
+  });
   return run.questions.map(q => {
-    const rows = data.filter(r => Number(r.v[2]) === q.id);
-    const total = rows.length;
-    const good = rows.filter(r => r.v[4] === true).length;
+    const answers = Array.from(byQuestion.get(Number(q.id)).values());
+    const total = answers.length, good = answers.filter(Boolean).length;
     return {
       questionId: q.id,
       correctPercent: total ? Math.round(good * 100 / total) : 0,
@@ -428,13 +459,13 @@ function miniStatistics_(run) {
 }
 
 /**
- * Отправляет кнопку только TEST_CHAT_ID, не меняя меню BotFather,
+ * Отправляет кнопку тестового запуска только TEST_CHAT_ID, не меняя меню BotFather,
  * не вызывает getUpdates и не меняет существующий Telegram-бот.
  */
 
 /**
  * Отправить кнопку ТОЛЬКО TEST_CHAT_ID и только один раз для текущего выпуска.
- * Адрес GAS берётся у опубликованного Web App; вводить URL в Mini App не нужно.
+ * Адрес GAS берётся из MINI_WEBAPP_URL; вводить URL в Mini App не нужно.
  */
 function sendTimedPilotButton() {
   miniRequireOwnerRun_();
@@ -458,9 +489,9 @@ function sendTimedPilotButton() {
   const appUrl = MINI.pagesUrl + "?gas=" + encodeURIComponent(gasUrl);
   const payload = {
     chat_id: chatId,
-    text: "Мини-тест «вы́Читать»: новый выпуск с таймером на каждый вопрос.",
+    text: "«вы́Читать»: 6 вопросов по русскому языку. На каждый вопрос — свой таймер.",
     reply_markup: {inline_keyboard: [[{
-      text: "Пройти тест с таймером",
+      text: "Пройти 6 вопросов",
       web_app: {url: appUrl}
     }]]}
   };
