@@ -815,9 +815,17 @@ function miniTuesdayLaunch_() {
     // Не рассылаем старый тест повторно каждую неделю.
     const draft=miniReadQuestions_();
     const previous=active.length?active[active.length-1]:null;
-    if (previous && JSON.stringify(draft)===String(previous.v[4])) {
-      console.log("Новых вопросов нет: выпуск и рассылка пропущены.");
-      return;
+    if (previous) {
+      // Сравниваем содержимое, а не порядок ключей JSON.
+      const normalize=items=>items.map(q=>[
+        Number(q.id),String(q.description||""),String(q.text||""),
+        q.options, q.correct,String(q.explanation||""),Number(q.timeSeconds||60)
+      ]);
+      if (JSON.stringify(normalize(draft))===
+          JSON.stringify(normalize(JSON.parse(String(previous.v[4]))))) {
+        console.log("Новых вопросов нет: выпуск и рассылка пропущены.");
+        return;
+      }
     }
     miniCreateNewEdition_();
   }
