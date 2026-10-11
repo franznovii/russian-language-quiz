@@ -433,9 +433,11 @@ function sendTimedPilotButton() {
   if (!token || !/^[1-9][0-9]{3,15}$/.test(chatId)) {
     throw new Error("Проверь BOT_TOKEN и TEST_CHAT_ID");
   }
-  const gasUrl = ScriptApp.getService().getUrl();
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(gasUrl || "")) {
-    throw new Error("Не получен /exec URL действующего Web App. Проверь развёртывание.");
+  // ScriptApp.getService().getUrl() иногда возвращает null при ручном запуске.
+  // Для надежности адрес уже опубликованного Web App указывает владелец в Script Properties.
+  const gasUrl = String(props.getProperty("MINI_WEBAPP_URL") || "").trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(gasUrl)) {
+    throw new Error("Добавь MINI_WEBAPP_URL в свойства скрипта: полный адрес Web App, заканчивающийся на /exec.");
   }
   const appUrl = MINI.pagesUrl + "?gas=" + encodeURIComponent(gasUrl);
   const payload = {
