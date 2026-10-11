@@ -399,7 +399,7 @@ function miniBuildState_(run, user) {
     complete: complete,
     score: complete ? answers.filter(a => a.correct).length : null,
     statistics: null,
-    subscriptionStatus: statsReady ? "checking" : "not_due",
+    subscriptionStatus: complete ? "checking" : "not_finished",
     statsReady: statsReady,
     statisticsAt: Utilities.formatDate(new Date(run.statsAt), MINI.tz, "dd.MM.yyyy HH:mm")
   };
@@ -489,10 +489,12 @@ function miniCheckChannelMember_(userId) {
  * Выполняется отдельно от блокировки таблицы.
  */
 function miniApplySubscriptionGate_(user,state) {
-  if (!state || state.ok!==true || !state.complete || !state.statsReady)
+  // Проверяем подписку СРАЗУ после завершения теста, независимо от времени.
+  // Общая статистика выдаётся лишь после 19:00 МСК.
+  if (!state || state.ok!==true || !state.complete)
     return state;
   state.subscriptionStatus=miniCheckChannelMember_(user.id);
-  if (state.subscriptionStatus!=="member") return state;
+  if (state.subscriptionStatus!=="member" || !state.statsReady) return state;
   const entry=miniRows_(MINI.runSheet).find(r=>String(r.v[0])===String(state.runId));
   if (!entry) {
     state.subscriptionStatus="unavailable";
