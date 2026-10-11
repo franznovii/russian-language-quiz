@@ -687,7 +687,7 @@ function configureMiniBotMenu() {
   const token = miniProps_().getProperty("BOT_TOKEN");
   if (!token) throw new Error("Нет BOT_TOKEN");
   miniTelegramRequest_("setChatMenuButton",token,{
-    menu_button: {type:"web_app",text:"Пройти тест",web_app:{url:miniPublicLaunchUrl_()}}
+    menu_button: {type:"web_app",text:"Открыть тест",web_app:{url:miniPublicLaunchUrl_()}}
   });
   console.log("PASS: кнопка Mini App включена в меню личного чата бота.");
 }
@@ -807,10 +807,20 @@ function miniTuesdayLaunch_() {
   const day=Utilities.formatDate(now,MINI.tz,"yyyy-MM-dd");
   // Полдень по Москве, чтобы определять день недели без зависимости от UTC.
   if (new Date(day+"T12:00:00+03:00").getUTCDay()!==2) return;
-  const already=miniRows_(MINI.runSheet).some(row =>
-    String(row.v[3])==="ACTIVE" &&
+  const active=miniRows_(MINI.runSheet).filter(row=>String(row.v[3])==="ACTIVE");
+  const already=active.some(row=>
     Utilities.formatDate(new Date(row.v[1]),MINI.tz,"yyyy-MM-dd")===day);
-  if (!already) miniCreateNewEdition_();
+  if (!already) {
+    // Новый выпуск возникает только при изменении шести вопросов.
+    // Не рассылаем старый тест повторно каждую неделю.
+    const draft=miniReadQuestions_();
+    const previous=active.length?active[active.length-1]:null;
+    if (previous && JSON.stringify(draft)===String(previous.v[4])) {
+      console.log("Новых вопросов нет: выпуск и рассылка пропущены.");
+      return;
+    }
+    miniCreateNewEdition_();
+  }
   // Доставка — только если явно включены адресные приглашения.
   if (String(props.getProperty("MINI_INVITES_ENABLED"))==="yes") {
     // За один запуск — не более 200 личных сообщений, с дедупликацией.
@@ -963,21 +973,29 @@ function miniSaveBotContact_(id, name) {
  * Для других сообщений и групп ничего не делаем.
  */
 function doPost(e) {
+  // HTML-ответ вместо ContentService: исключаем лишний 302-редирект
+  // при доставке Telegram webhook на Google Apps Script.
+  const response=()=>HtmlService.createHtmlOutput("ok");
   try{
     const secret=String(miniProps_().getProperty("MINI_LAUNCHER_WEBHOOK_KEY")||"");
     if(secret.length<32 || !e || !e.parameter ||
         String(e.parameter.mini_key||"")!==secret){
       console.warn("Mini launcher: rejected unverified update");
-      return ContentService.createTextOutput("ok");
+      return response();
     }
     const update=JSON.parse(String(e.postData?.contents||""));
     const message=update?.message;
     if(!message || message.chat?.type!=="private" ||
       !/^\/start(?:\s+[A-Za-z0-9_-]{1,64})?\s*$/.test(String(message.text||"")))
-      return ContentService.createTextOutput("ok");
+      return response();
     const user=message.from,chat=message.chat;
     if(!user || !Number.isSafeInteger(user.id) || !chat || chat.id!==user.id)
-      return ContentService.createTextOutput("ok");
+      return response();
+    // Telegram повторяет доставку обновлений при временной ошибке webhook.
+    const updateId=Number(update.update_id);
+    const props=miniProps_();
+    const last=Number(props.getProperty("MINI_LAST_START_UPDATE_ID")||"-1");
+    if(Number.isSafeInteger(updateId) && updateId<=last) return response();
     miniSaveBotContact_(String(user.id),String(user.first_name||"").slice(0,80));
     miniTelegramRequest_("sendMessage",miniProps_().getProperty("BOT_TOKEN"),{
       chat_id:user.id,
@@ -988,11 +1006,13 @@ function doPost(e) {
         {text:"Открыть тест",web_app:{url:miniPublicLaunchUrl_()}}
       ]]}
     });
+    if(Number.isSafeInteger(updateId))
+      props.setProperty("MINI_LAST_START_UPDATE_ID",String(updateId));
   }catch(error){
     console.warn("Mini launcher: "+String(error.message||error)
       .replace(String(miniProps_().getProperty("BOT_TOKEN")||""),"[TOKEN]"));
   }
-  return ContentService.createTextOutput("ok");
+  return response();
 }
 
 /**
@@ -1037,6 +1057,7 @@ function activateMiniLauncherWebhook() {
   miniTelegramRequest_("setWebhook",token,{
     url:endpoint+"?mini_key="+key,
     allowed_updates:["message"],
+    max_connections:1,
     drop_pending_updates:false
   });
   console.log("PASS: Telegram /start теперь обслуживает новый launcher; "+
