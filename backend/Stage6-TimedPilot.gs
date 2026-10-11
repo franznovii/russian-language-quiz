@@ -61,10 +61,25 @@ function miniAppend_(name, array) {
 /** Выполни вручную ОДИН РАЗ для начала пилотного выпуска. */
 
 /**
+ * Эти функции изменяют административные настройки.
+ * Защищаем от вызова публичным HtmlService-клиентом.
+ * В редакторе GAS владелец имеет активный и эффективный аккаунт,
+ * у обычного публичного посетителя Web App active email отсутствует.
+ */
+function miniRequireOwnerRun_() {
+  const active = Session.getActiveUser().getEmail();
+  const owner = Session.getEffectiveUser().getEmail();
+  if (!active || !owner || active !== owner) {
+    throw new Error("Эту операцию может выполнить только владелец в редакторе GAS.");
+  }
+}
+
+/**
  * Подготовка только структуры: новый лист «Мини_Таймеры» и колонка К
  * исходного листа «Вопросы». Старые ответы не стираются.
  */
 function setupMiniTimedPilot() {
+  miniRequireOwnerRun_();
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -103,6 +118,7 @@ function setupMiniTimedPilot() {
  * Не запускай повторно без необходимости: каждый запуск — новый выпуск.
  */
 function startNewTimedPilot() {
+  miniRequireOwnerRun_();
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -405,6 +421,7 @@ function miniStatistics_(run) {
  * Адрес GAS берётся у опубликованного Web App; вводить URL в Mini App не нужно.
  */
 function sendTimedPilotButton() {
+  miniRequireOwnerRun_();
   const props = miniProps_();
   const runId = props.getProperty("MINI_ACTIVE_RUN");
   if (!runId) throw new Error("Сначала запусти startNewTimedPilot()");
