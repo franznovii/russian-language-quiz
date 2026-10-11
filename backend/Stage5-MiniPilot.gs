@@ -296,6 +296,9 @@ function miniStatistics_(run) {
  */
 function sendMiniPilotButton() {
   const props = miniProps_();
+  if (props.getProperty("MINI_BUTTON_SENT_AT")) {
+    throw new Error("Тестовая кнопка уже отправлена. Проверь чат с ботом.");
+  }
   const token = props.getProperty("BOT_TOKEN");
   const chatId = String(props.getProperty("TEST_CHAT_ID") || "").trim();
   if (!token) throw new Error("Не указан BOT_TOKEN");
@@ -319,6 +322,7 @@ function sendMiniPilotButton() {
   if (!result.ok) {
     throw new Error("Telegram не принял сообщение: код " + (result.error_code || response.getResponseCode()));
   }
+  props.setProperty("MINI_BUTTON_SENT_AT", new Date().toISOString());
   console.log("PASS: тестовая кнопка отправлена в твой личный чат.");
 }
 
