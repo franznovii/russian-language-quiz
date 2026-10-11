@@ -618,6 +618,8 @@ function miniSendInvitationsBatch_() {
         });
         log.appendRow([run.id,id,new Date()]);
         success++;
+        // Мягкое ограничение скорости Telegram: не более примерно 10/сек.
+        Utilities.sleep(100);
       } catch(e) {
         errors++;
         console.warn("Mini App invite: " + String(e.message||e)
@@ -672,9 +674,17 @@ function miniTuesdayLaunch_() {
   if (!already) miniCreateNewEdition_();
   // Доставка — только если явно включены адресные приглашения.
   if (String(props.getProperty("MINI_INVITES_ENABLED"))==="yes") {
-    const sent=miniSendInvitationsBatch_();
-    console.log("Вторник: отправлено приглашений "+sent.sent+
-      "; осталось "+sent.remaining+".");
+    // За один запуск — не более 200 личных сообщений, с дедупликацией.
+    // Если получателей больше, запусти sendMiniInvitationsBatch вручную,
+    // либо добавь отдельный триггер на продолжение (до публичного старта).
+    let total=0,remaining=0;
+    for(let batch=0;batch<10;batch++){
+      const sent=miniSendInvitationsBatch_();
+      total+=sent.sent;remaining=sent.remaining;
+      if (!remaining || !sent.sent || sent.errors) break;
+    }
+    console.log("Вторник: отправлено приглашений "+total+
+      "; осталось "+remaining+".");
   }
 }
 
