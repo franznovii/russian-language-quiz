@@ -27,6 +27,10 @@ const MINI = Object.freeze({
   timersSheet: "Мини_Таймеры",
   questionSheet: "Вопросы"
 });
+const MINI_OPTION_HEADERS = Object.freeze([
+  "Вариант 5", "Вариант 6", "Вариант 7",
+  "Вариант 8", "Вариант 9", "Вариант 10"
+]);
 const MINI_HEADERS = Object.freeze({
   "Мини_Выпуски": ["run_id", "created_at", "stats_after", "status", "questions_snapshot_json"],
   "Мини_Участники": ["run_id", "telegram_id", "first_name", "started_at"],
@@ -105,11 +109,24 @@ function setupMiniTimedPilot() {
     if (heading && heading !== "Время на ответ (сек.)") {
       throw new Error("Колонка K занята другими данными. Ничего не перезаписано.");
     }
+    // Варианты 5–10 располагаются в L:Q. Колонки H–K не сдвигаем:
+    // H — правильные ответы, I — объяснение, J — описание, K — таймер.
+    // Проверяем заголовки до каких-либо изменений.
+    const extraHeaders = qSheet.getRange(1, 12, 1, 6).getValues()[0];
+    MINI_OPTION_HEADERS.forEach((expected, i) => {
+      const actual = String(extraHeaders[i] || "").trim();
+      if (actual && actual !== expected) {
+        throw new Error("Колонка " + String.fromCharCode(76 + i) +
+          " уже используется. Ничего не перезаписано.");
+      }
+    });
     qSheet.getRange(1, 11).setValue("Время на ответ (сек.)");
     qSheet.setColumnWidth(11, 185);
+    qSheet.getRange(1, 12, 1, 6).setValues([MINI_OPTION_HEADERS]);
+    for (let col = 12; col <= 17; col++) qSheet.setColumnWidth(col, 170);
     spreadsheet.getSheetByName(MINI.timersSheet).getRange("B:B").setNumberFormat("@");
     spreadsheet.getSheetByName(MINI.answersSheet).getRange("B:B").setNumberFormat("@");
-    console.log("PASS: колонка K и лист «Мини_Таймеры» готовы. Старые ответы сохранены.");
+    console.log("PASS: колонка K, варианты 5–10 (L:Q) и лист «Мини_Таймеры» готовы. Старые ответы сохранены.");
   } finally { lock.releaseLock(); }
 }
 
@@ -126,6 +143,10 @@ function startNewTimedPilot() {
     const qSheet = miniSheetFile_().getSheetByName(MINI.questionSheet);
     if (!qSheet || String(qSheet.getRange(1, 11).getValue()) !== "Время на ответ (сек.)") {
       throw new Error("Сначала выполни setupMiniTimedPilot()");
+    }
+    const extraHeaders = qSheet.getRange(1, 12, 1, 6).getValues()[0];
+    if (JSON.stringify(extraHeaders) !== JSON.stringify(MINI_OPTION_HEADERS)) {
+      throw new Error("Для 10 вариантов сначала выполни setupMiniTimedPilot()");
     }
     const questions = miniReadQuestions_();
     const now = new Date();
@@ -149,16 +170,19 @@ function miniReadQuestions_() {
   if (!sheet) throw new Error("Нет листа «Вопросы»");
   const last = sheet.getLastRow();
   if (last < 2) throw new Error("Лист «Вопросы» пуст");
-  const records = sheet.getRange(2, 1, last - 1, 11).getDisplayValues();
+  const records = sheet.getRange(2, 1, last - 1, 17).getDisplayValues();
   const questions = records.filter(r => String(r[0]).trim() !== "").map(r => {
     const id = Number(r[0]);
-    const options = r.slice(3, 7).map(String);
+    // Старые 4 варианта D:G; дополнительные 6 — L:Q.
+    // Пустыми допускаются только ячейки ПОСЛЕ последнего варианта.
+    const options = r.slice(3, 7).concat(r.slice(11, 17))
+      .map(value => String(value).trim());
     while (options.length > 0 && !options[options.length - 1]) options.pop();
     const correct = String(r[7]).trim().split(/[,;\s]+/).map(Number);
     const timeRaw = String(r[10] || "").trim();
     const timeSeconds = timeRaw ? Number(timeRaw) : 60;
     if (!Number.isInteger(id) || id < 1 || id > 6 ||
-        !String(r[2]).trim() || options.length < 2 || options.some(x => !x.trim()) ||
+        !String(r[2]).trim() || options.length < 2 || options.length > 10 || options.some(x => !x) ||
         !correct.length || new Set(correct).size !== correct.length ||
         correct.some(n => !Number.isInteger(n) || n < 1 || n > options.length) ||
         !Number.isInteger(timeSeconds) || timeSeconds < 15 || timeSeconds > 300) {
@@ -360,9 +384,9 @@ function miniAnswerFor_(user, payload) {
   }
   const questionId = Number(payload.questionId);
   const selected = payload.selected;
-  if (selected.length < 1 || selected.length > 4 ||
+  if (selected.length < 1 || selected.length > 10 ||
       new Set(selected).size !== selected.length ||
-      selected.some(x => !Number.isInteger(x) || x < 0 || x > 3)) {
+      selected.some(x => !Number.isInteger(x) || x < 0 || x > 9)) {
     return {ok: false, error: "Некорректные варианты ответа"};
   }
   const lock = LockService.getScriptLock();
