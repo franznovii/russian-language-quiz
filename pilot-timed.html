@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="robots" content="noindex,nofollow">
+  <meta name="robots" content="noindex,follow">
   <meta name="theme-color" content="#f5f1e9">
-  <title>Тест с таймером — вы́Читать</title>
+  <title>Тест по русскому языку — вы́Читать</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="./style.css">
   <style>
@@ -61,9 +61,9 @@
   <header class="site-header"><div class="wordmark">вы́<span>Читать</span><span class="mark-dot">.</span></div><div class="header-tag">РУССКИЙ ЯЗЫК</div></header>
   <main>
     <section class="mini-screen" id="connect-screen">
-      <div class="eyebrow"><span class="eyebrow-line"></span> Закрытая проверка</div>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Мини-тест по русскому языку</div>
       <h1>Русский<br><span class="hero-accent">на практике.</span></h1>
-      <p class="lead">Шесть вопросов. Никакого таймера. Результат хранится в Google Таблице и связан только с твоим Telegram-аккаунтом.</p>
+      <p class="lead">Шесть вопросов доступны сразу. На каждый вопрос — своё время, на весь выпуск — одна попытка. В конце узнаешь свой результат.</p>
       <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
       <p class="resume">На вопрос по умолчанию даётся 60 секунд. Время может отличаться для разных заданий. Таймер не останавливается при закрытии приложения.</p>
       <button class="primary-btn" id="connect-btn" type="button">Открыть тест <span aria-hidden="true">→</span></button>
@@ -77,7 +77,7 @@
       <div class="intro-visual" aria-hidden="true">
         <div class="big-letter">Я</div><span class="visual-note">Тут надо<br>подумать.</span><span class="visual-star">✳</span>
       </div>
-      <div class="intro-facts"><span>06 вопросов</span><span>Без таймера</span><span>Одна попытка</span></div>
+      <div class="intro-facts"><span>06 вопросов</span><span>Таймер на вопрос</span><span>Одна попытка</span></div>
       <p class="resume" id="resume-text"></p>
       <button class="primary-btn" id="begin-btn" type="button">Начать <span aria-hidden="true">↗</span></button>
     </section>
@@ -102,14 +102,14 @@
       <p class="lead" id="result-joke"></p>
       <div id="stats-section" hidden>
         <div class="eyebrow">Как справились остальные?</div>
-        <p class="stat-caption">Статистика на момент завершения. Только проценты, без количества участников.</p>
+        <p class="stat-caption">Статистика на момент открытия. Только проценты, без количества участников.</p>
         <div id="stats" class="stats"></div>
       </div>
       <div id="stats-pending" class="notice" hidden></div>
       <div class="notice">Твои ответы сохранены. Повторно пройти этот же выпуск нельзя.</div>
     </section>
   </main>
-  <footer class="site-footer"><span>вы́Читать © 2026</span><span>Пилот Mini App</span></footer>
+  <footer class="site-footer"><span>вы́Читать © 2026</span><span>Тест по русскому языку</span></footer>
 </div>
 <script>
 "use strict";
@@ -219,8 +219,12 @@ window.addEventListener("message",event=>{
   if(!trustGoogle(event.origin)||!event.data||typeof event.data!=="object")return;
   const msg=event.data;
   if(msg.type==="miniReady"){
-    if(frame){serverOrigin=event.origin;bridgeSource=event.source;bridgeReady=true}
-  } else if(msg.type==="miniResponse" && typeof msg.requestId==="string" && pending.has(msg.requestId)){
+    if(frame && event.source===frame.contentWindow){
+      serverOrigin=event.origin;bridgeSource=event.source;bridgeReady=true
+    }
+  } else if(msg.type==="miniResponse" && event.source===bridgeSource &&
+      event.origin===serverOrigin && typeof msg.requestId==="string" &&
+      pending.has(msg.requestId)){
     const task=pending.get(msg.requestId);pending.delete(msg.requestId);
     clearTimeout(task.timer);
     if(!msg.data || msg.data.ok!==true)task.reject(new Error(String(msg.data?.error || "Ошибка GAS")));
@@ -229,7 +233,8 @@ window.addEventListener("message",event=>{
 });
 function call(action,payload) {
   return new Promise((resolve,reject)=>{
-    if(!frame||!bridgeReady||!serverOrigin||!bridgeSource) return reject(new Error("Нет соединения с GAS"));
+    if(!frame||!bridgeReady||!serverOrigin||!bridgeSource || !telegram?.initData)
+      return reject(new Error("Нет соединения с GAS или Telegram"));
     const id=randomId();
     const timer=setTimeout(()=>{pending.delete(id);reject(new Error("GAS не ответил за 30 секунд"));},30000);
     pending.set(id,{resolve,reject,timer});
@@ -291,7 +296,10 @@ function renderQuestion(){
   showingFeedback=false;selection=new Set();clockPending=false;
   currentIndex=currentState.answers.length;
   const q=currentState.questions[currentIndex];
-  if(!q){renderFinish();return}
+  if(!q){
+    logError("resume-text","Следующий вопрос ещё не открыт. Нажми «Продолжить тест».");
+    show("intro-screen");return
+  }
   el("question-count").textContent="Вопрос "+q.id+"/6";
   el("question-type").textContent=q.multiple?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
   el("progress").style.width=((currentIndex/6)*100)+"%";
