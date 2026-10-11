@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Просмотр вопросов из таблицы — вы́Читать</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    h1 {font-size:clamp(34px,8vw,52px)}
+    .field{display:block;width:100%;padding:14px 12px;background:#fff;border:1px solid #c9c3b7;font-size:14px}
+    .entry{margin:22px 0;padding:21px;background:#fffcf7;border:1px solid #d8d0c3}
+    .entry h2{font-size:26px;letter-spacing:-.035em;margin:10px 0}
+    .entry p{line-height:1.5;font-size:14px;white-space:pre-wrap}
+    .entry ol{padding-left:22px;line-height:1.75;font-size:14px}
+    .status{font-size:14px;padding:15px 0;line-height:1.5}
+    .note{font-size:12px;color:#666;line-height:1.5}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="site-header">
+    <div class="wordmark">вы́<span>Читать</span><span class="mark-dot">.</span></div>
+    <div class="header-tag">ТЕХНИЧЕСКИЙ ПРОСМОТР</div>
+  </header>
+  <main>
+    <section class="screen">
+      <div class="eyebrow"><span class="eyebrow-line"></span> Шаг 2 · Google Sheets</div>
+      <h1>Вопросы из таблицы.</h1>
+      <p class="lead">Проверяем, что GAS читает все шесть вопросов из действующей Google Таблицы. Эта страница ничего не сохраняет.</p>
+      <label for="url"><strong>Адрес опубликованного GAS (/exec)</strong></label>
+      <input id="url" type="url" class="field" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false">
+      <button id="load" class="primary-btn" type="button">Загрузить вопросы <span aria-hidden="true">→</span></button>
+      <div id="status" role="status" class="status" aria-live="polite">Ожидаю адрес GAS.</div>
+      <div id="questions"></div>
+      <p class="note">Правильные ответы и объяснения не передаются на эту страницу. Не используем персональные данные Telegram. Этот просмотр пока доступен любому, кто знает URL.</p>
+    </section>
+  </main>
+  <footer class="site-footer"><span>вы́Читать</span><a href="./">На главную</a></footer>
+</div>
+<script>
+"use strict";
+const output = document.getElementById("status");
+const list = document.getElementById("questions");
+const loadButton = document.getElementById("load");
+let serial = 0;
+function readJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = "__vychitatQuestions" + (++serial);
+    const node = document.createElement("script");
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("GAS не ответил за 15 секунд."));
+    }, 15000);
+    function cleanup() {
+      clearTimeout(timeout);
+      node.remove();
+      delete window[callbackName];
+    }
+    window[callbackName] = payload => { cleanup(); resolve(payload); };
+    node.onerror = () => { cleanup(); reject(new Error("Не удалось загрузить ответ GAS.")); };
+    node.src = url + "?action=questions&callback=" + encodeURIComponent(callbackName);
+    document.head.appendChild(node);
+  });
+}
+loadButton.addEventListener("click", async () => {
+  const url = document.getElementById("url").value.trim().replace(/\/+$/, "");
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(url)) {
+    output.textContent = "Введи адрес GAS Web App, заканчивающийся на /exec.";
+    return;
+  }
+  loadButton.disabled = true;
+  list.replaceChildren();
+  output.textContent = "Читаю вопросы из Google Таблицы…";
+  try {
+    const payload = await readJsonp(url);
+    if (!payload || !payload.ok || !Array.isArray(payload.questions)) {
+      throw new Error(payload && payload.error || "Неверный ответ GAS");
+    }
+    output.textContent = "Получено " + payload.questions.length + " вопросов. Правильные ответы не передавались.";
+    payload.questions.forEach(q => {
+      const entry = document.createElement("article");
+      entry.className = "entry";
+      const label = document.createElement("div");
+      label.className = "eyebrow";
+      label.textContent = "Вопрос " + q.id + "/6 · " + (q.multiple ? "Несколько правильных" : "Один правильный");
+      const heading = document.createElement("h2");
+      heading.textContent = q.question;
+      const desc = document.createElement("p");
+      desc.textContent = q.description || "";
+      if (!q.description) desc.hidden = true;
+      const options = document.createElement("ol");
+      (q.options || []).forEach(v => {
+        const item = document.createElement("li");
+        item.textContent = String(v);
+        options.appendChild(item);
+      });
+      entry.append(label, heading, desc, options);
+      list.appendChild(entry);
+    });
+  } catch (err) {
+    output.textContent = "Ошибка: " + (err && err.message || String(err));
+  } finally {
+    loadButton.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
