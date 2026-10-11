@@ -689,7 +689,11 @@ function configureMiniBotMenu() {
   miniTelegramRequest_("setChatMenuButton",token,{
     menu_button: {type:"web_app",text:"Открыть тест",web_app:{url:miniPublicLaunchUrl_()}}
   });
-  console.log("PASS: кнопка Mini App включена в меню личного чата бота.");
+  // Убираем все старые команды викторины из стандартного меню.
+  miniTelegramRequest_("setMyCommands",token,{
+    commands:[{command:"start",description:"Открыть тест"}]
+  });
+  console.log("PASS: кнопка Mini App в меню и только команда /start.");
 }
 
 /**
