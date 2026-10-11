@@ -509,6 +509,120 @@ function sendTimedPilotButton() {
   console.log("PASS: кнопка с таймером отправлена администратору.");
 }
 
+
+/**
+ * Служебные инструменты ПОДГОТОВКИ публичного выпуска.
+ * Не запускаются сами. До запуска в Script Properties оставь MINI_ACCESS_MODE=pilot.
+ * Telegram-бот не имеет права писать пользователю, не начавшему диалог с ботом.
+ */
+
+function miniPublicLaunchUrl_() {
+  const gasUrl = String(miniProps_().getProperty("MINI_WEBAPP_URL") || "").trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(gasUrl))
+    throw new Error("Укажи корректный MINI_WEBAPP_URL (/exec).");
+  return MINI.pagesUrl + "?gas=" + encodeURIComponent(gasUrl);
+}
+
+function miniTelegramRequest_(method, token, payload) {
+  const response = UrlFetchApp.fetch(
+    "https://api.telegram.org/bot" + token + "/" + method, {
+      method:"post",contentType:"application/json",
+      payload:JSON.stringify(payload),muteHttpExceptions:true
+    }
+  );
+  let data;
+  try {data = JSON.parse(response.getContentText());}
+  catch (_) {throw new Error("Telegram вернул некорректный ответ.");}
+  if (!data || !data.ok)
+    throw new Error("Telegram " + method + ": " +
+      String(data?.description || data?.error_code || response.getResponseCode()));
+  return data;
+}
+
+/**
+ * Однократно при публичном запуске: добавляет кнопку «Пройти тест»
+ * в меню ЛИЧНОГО чата с ботом. Не меняет webhook, команды или старого бота.
+ * Пока MINI_ACCESS_MODE != public, запуск запрещён.
+ */
+function configureMiniBotMenu() {
+  miniRequireOwnerRun_();
+  if (String(miniProps_().getProperty("MINI_ACCESS_MODE")) !== "public")
+    throw new Error("Сначала включи MINI_ACCESS_MODE = public, когда пилот проверен.");
+  const token = miniProps_().getProperty("BOT_TOKEN");
+  if (!token) throw new Error("Нет BOT_TOKEN");
+  miniTelegramRequest_("setChatMenuButton",token,{
+    menu_button: {type:"web_app",text:"Пройти тест",web_app:{url:miniPublicLaunchUrl_()}}
+  });
+  console.log("PASS: кнопка Mini App включена в меню личного чата бота.");
+}
+
+/**
+ * По запросу владельца отправляет приглашения ТОЛЬКО тем, кто раньше
+ * начал диалог с ботом и отмечен «Активен» в старом листе «Участники».
+ * Пакет не больше 20 человек за запуск. Дубли в одном выпуске исключены.
+ * Никаких автоматических вечерних сообщений.
+ */
+function sendMiniInvitationsBatch() {
+  miniRequireOwnerRun_();
+  const props=miniProps_();
+  if (String(props.getProperty("MINI_ACCESS_MODE")) !== "public" ||
+      String(props.getProperty("MINI_INVITES_ENABLED")) !== "yes") {
+    throw new Error("Рассылка выключена. Перед публичным запуском явно задай " +
+      "MINI_ACCESS_MODE=public и MINI_INVITES_ENABLED=yes.");
+  }
+  const token=props.getProperty("BOT_TOKEN");
+  if (!token) throw new Error("Нет BOT_TOKEN");
+  const run=miniActiveRun_();
+  const book=miniSheetFile_();
+  const old=book.getSheetByName("Участники");
+  if (!old) throw new Error("Не найден список «Участники» старого бота");
+  const lock=LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    let log=book.getSheetByName("Мини_Приглашения");
+    if (!log) {
+      log=book.insertSheet("Мини_Приглашения");
+      log.getRange(1,1,1,3).setValues([["run_id","telegram_id","sent_at"]]);
+      log.setFrozenRows(1);
+    }
+    const previous=log.getLastRow()>1
+      ? log.getRange(2,1,log.getLastRow()-1,3).getValues() : [];
+    const sentIds=new Set(previous.filter(r=>String(r[0])===run.id).map(r=>String(r[1])));
+    const last=old.getLastRow();
+    const data=last>1?old.getRange(2,1,last-1,2).getValues():[];
+    const targets=[];
+    const seen=new Set();
+    data.forEach(r=>{
+      const id=String(r[0]).trim(),active=String(r[1]).toLowerCase()==="true";
+      if (active && /^[1-9]\d{3,15}$/.test(id) &&
+          !seen.has(id) && !sentIds.has(id)) {
+        targets.push(id);seen.add(id);
+      }
+    });
+    const app=miniPublicLaunchUrl_();
+    let success=0, errors=0;
+    for(const id of targets.slice(0,20)){
+      try {
+        miniTelegramRequest_("sendMessage",token,{
+          chat_id:id,text:"«вы́Читать»: вышел новый тест по русскому языку. " +
+          "Все шесть вопросов доступны сразу. Попробуешь?",
+          reply_markup:{inline_keyboard:[[{text:"Пройти тест",web_app:{url:app}}]]}
+        });
+        log.appendRow([run.id,id,new Date()]);
+        success++;
+      } catch(e) {
+        errors++;
+        console.warn("Mini App invite: " + String(e.message||e)
+          .replace(token,"[TOKEN]"));
+        if (/429|Too Many Requests|retry after/i.test(String(e.message||e))) break;
+      }
+    }
+    console.log("PASS: приглашений отправлено " + success +
+      "; ошибок " + errors + "; осталось к отправке до " +
+      (targets.length-success) + ". Повтори отправку при необходимости.");
+  } finally {lock.releaseLock();}
+}
+
 // Telegram initData verifier: source Stage4, already tested with real Telegram.
 function verifyTelegramInitData_(raw, token, nowSeconds) {
   if (typeof raw !== "string" || !raw || raw.length > MAX_INITDATA_LENGTH) {
