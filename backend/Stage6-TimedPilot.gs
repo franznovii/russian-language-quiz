@@ -25,11 +25,13 @@ const MINI = Object.freeze({
   peopleSheet: "Мини_Участники",
   answersSheet: "Мини_Ответы",
   timersSheet: "Мини_Таймеры",
-  questionSheet: "Вопросы"
+  questionSheet: "Мини_Вопросы"
 });
-const MINI_OPTION_HEADERS = Object.freeze([
-  "Вариант 5", "Вариант 6", "Вариант 7",
-  "Вариант 8", "Вариант 9", "Вариант 10"
+const MINI_QUESTION_HEADERS = Object.freeze([
+  "№", "Когда отправить (МСК)", "Описание", "Вопрос",
+  "Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4", "Вариант 5",
+  "Вариант 6", "Вариант 7", "Вариант 8", "Вариант 9", "Вариант 10",
+  "Правильные", "Объяснение", "Время на ответ (сек.)"
 ]);
 const MINI_HEADERS = Object.freeze({
   "Мини_Выпуски": ["run_id", "created_at", "stats_after", "status", "questions_snapshot_json"],
@@ -82,12 +84,24 @@ function miniRequireOwnerRun_() {
  * Подготовка только структуры: новый лист «Мини_Таймеры» и колонка К
  * исходного листа «Вопросы». Старые ответы не стираются.
  */
+function miniCheckQuestionHeaders_() {
+  const questionSheet = miniSheetFile_().getSheetByName(MINI.questionSheet);
+  if (!questionSheet) throw new Error("Нет листа «Мини_Вопросы». Не редактируй старый лист «Вопросы».");
+  const current = questionSheet.getRange(1, 1, 1, 17).getValues()[0].map(String);
+  if (JSON.stringify(current) !== JSON.stringify(MINI_QUESTION_HEADERS)) {
+    throw new Error("Столбцы «Мини_Вопросы» отличаются от ожидаемых A–Q. Ничего не изменено.");
+  }
+  return questionSheet;
+}
+
 function setupMiniTimedPilot() {
   miniRequireOwnerRun_();
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
     const spreadsheet = miniSheetFile_();
+    // Проверка нового порядка колонок: не перемещаем столбцы старого бота.
+    const qSheet = miniCheckQuestionHeaders_();
     Object.keys(MINI_HEADERS).forEach(name => {
       let sheet = spreadsheet.getSheetByName(name);
       if (!sheet) sheet = spreadsheet.insertSheet(name);
@@ -103,30 +117,10 @@ function setupMiniTimedPilot() {
         }
       }
     });
-    const qSheet = spreadsheet.getSheetByName(MINI.questionSheet);
-    if (!qSheet) throw new Error("Не найден лист «Вопросы»");
-    const heading = String(qSheet.getRange(1, 11).getValue() || "").trim();
-    if (heading && heading !== "Время на ответ (сек.)") {
-      throw new Error("Колонка K занята другими данными. Ничего не перезаписано.");
-    }
-    // Варианты 5–10 располагаются в L:Q. Колонки H–K не сдвигаем:
-    // H — правильные ответы, I — объяснение, J — описание, K — таймер.
-    // Проверяем заголовки до каких-либо изменений.
-    const extraHeaders = qSheet.getRange(1, 12, 1, 6).getValues()[0];
-    MINI_OPTION_HEADERS.forEach((expected, i) => {
-      const actual = String(extraHeaders[i] || "").trim();
-      if (actual && actual !== expected) {
-        throw new Error("Колонка " + String.fromCharCode(76 + i) +
-          " уже используется. Ничего не перезаписано.");
-      }
-    });
-    qSheet.getRange(1, 11).setValue("Время на ответ (сек.)");
-    qSheet.setColumnWidth(11, 185);
-    qSheet.getRange(1, 12, 1, 6).setValues([MINI_OPTION_HEADERS]);
-    for (let col = 12; col <= 17; col++) qSheet.setColumnWidth(col, 170);
+    qSheet.getRange("O:O").setNumberFormat("@");
     spreadsheet.getSheetByName(MINI.timersSheet).getRange("B:B").setNumberFormat("@");
     spreadsheet.getSheetByName(MINI.answersSheet).getRange("B:B").setNumberFormat("@");
-    console.log("PASS: колонка K, варианты 5–10 (L:Q) и лист «Мини_Таймеры» готовы. Старые ответы сохранены.");
+    console.log("PASS: новый порядок A–Q в «Мини_Вопросы» проверен. Старые листы не изменены.");
   } finally { lock.releaseLock(); }
 }
 
@@ -140,14 +134,7 @@ function startNewTimedPilot() {
   lock.waitLock(15000);
   try {
     miniSheet_(MINI.timersSheet);
-    const qSheet = miniSheetFile_().getSheetByName(MINI.questionSheet);
-    if (!qSheet || String(qSheet.getRange(1, 11).getValue()) !== "Время на ответ (сек.)") {
-      throw new Error("Сначала выполни setupMiniTimedPilot()");
-    }
-    const extraHeaders = qSheet.getRange(1, 12, 1, 6).getValues()[0];
-    if (JSON.stringify(extraHeaders) !== JSON.stringify(MINI_OPTION_HEADERS)) {
-      throw new Error("Для 10 вариантов сначала выполни setupMiniTimedPilot()");
-    }
+    miniCheckQuestionHeaders_();
     const questions = miniReadQuestions_();
     const now = new Date();
     const day = Utilities.formatDate(now, MINI.tz, "yyyy-MM-dd");
@@ -166,36 +153,41 @@ function startNewTimedPilot() {
 }
 
 function miniReadQuestions_() {
-  const sheet = miniSheetFile_().getSheetByName(MINI.questionSheet);
-  if (!sheet) throw new Error("Нет листа «Вопросы»");
+  // A = №, B = дата, C = описание, D = вопрос, E:N = 10 вариантов,
+  // O = правильные (1–10), P = объяснение, Q = таймер (15–300, пусто = 60).
+  const sheet = miniCheckQuestionHeaders_();
   const last = sheet.getLastRow();
-  if (last < 2) throw new Error("Лист «Вопросы» пуст");
+  if (last < 2) throw new Error("Лист «Мини_Вопросы» пуст");
   const records = sheet.getRange(2, 1, last - 1, 17).getDisplayValues();
   const questions = records.filter(r => String(r[0]).trim() !== "").map(r => {
     const id = Number(r[0]);
-    // Старые 4 варианта D:G; дополнительные 6 — L:Q.
-    // Пустыми допускаются только ячейки ПОСЛЕ последнего варианта.
-    const options = r.slice(3, 7).concat(r.slice(11, 17))
-      .map(value => String(value).trim());
-    while (options.length > 0 && !options[options.length - 1]) options.pop();
-    const correct = String(r[7]).trim().split(/[,;\s]+/).map(Number);
-    const timeRaw = String(r[10] || "").trim();
+    const options = r.slice(4, 14).map(value => String(value).trim());
+    while (options.length && !options[options.length - 1]) options.pop();
+    const correctText = String(r[14] || "").trim();
+    const correct = correctText ? correctText.split(/[,;\s]+/).map(Number) : [];
+    const timeRaw = String(r[16] || "").trim();
     const timeSeconds = timeRaw ? Number(timeRaw) : 60;
     if (!Number.isInteger(id) || id < 1 || id > 6 ||
-        !String(r[2]).trim() || options.length < 2 || options.length > 10 || options.some(x => !x) ||
-        !correct.length || new Set(correct).size !== correct.length ||
+        !String(r[3]).trim() || options.length < 2 || options.length > 10 ||
+        options.some(x => !x) || correct.length === 0 ||
+        new Set(correct).size !== correct.length ||
         correct.some(n => !Number.isInteger(n) || n < 1 || n > options.length) ||
         !Number.isInteger(timeSeconds) || timeSeconds < 15 || timeSeconds > 300) {
-      throw new Error("Проверь исходные вопросы, № " + r[0]);
+      throw new Error("Проверь строку " + (id + 1) +
+        " листа «Мини_Вопросы»: вопрос, варианты, правильные и время.");
     }
     return {
-      id: id, text: String(r[2]), description: String(r[9] || ""),
-      options: options, correct: correct.map(x => x - 1).sort((a, b) => a - b),
-      explanation: String(r[8] || ""), timeSeconds: timeSeconds
+      id: id,
+      description: String(r[2] || ""),
+      text: String(r[3]),
+      options: options,
+      correct: correct.map(x => x - 1).sort((a, b) => a - b),
+      explanation: String(r[15] || ""),
+      timeSeconds: timeSeconds
     };
   });
   if (questions.length !== 6 || new Set(questions.map(q => q.id)).size !== 6) {
-    throw new Error("Ожидается ровно 6 вопросов с уникальными номерами");
+    throw new Error("Нужно ровно шесть вопросов с уникальными номерами");
   }
   return questions.sort((a, b) => a.id - b.id);
 }
