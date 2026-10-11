@@ -219,9 +219,7 @@ window.addEventListener("message",event=>{
   if(!trustGoogle(event.origin)||!event.data||typeof event.data!=="object")return;
   const msg=event.data;
   if(msg.type==="miniReady"){
-    if(frame && event.source===frame.contentWindow){
-      serverOrigin=event.origin;bridgeSource=event.source;bridgeReady=true
-    }
+    if(frame){serverOrigin=event.origin;bridgeSource=event.source;bridgeReady=true}
   } else if(msg.type==="miniResponse" && event.source===bridgeSource &&
       event.origin===serverOrigin && typeof msg.requestId==="string" &&
       pending.has(msg.requestId)){
