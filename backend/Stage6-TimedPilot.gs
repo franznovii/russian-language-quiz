@@ -1057,15 +1057,31 @@ function doPost(e) {
     const last=Number(props.getProperty("MINI_LAST_START_UPDATE_ID")||"-1");
     if(Number.isSafeInteger(updateId) && updateId<=last) return response();
     miniSaveBotContact_(String(user.id),String(user.first_name||"").slice(0,80));
-    miniTelegramRequest_("sendMessage",miniProps_().getProperty("BOT_TOKEN"),{
-      chat_id:user.id,
-      text:miniLauncherText_(),
-      parse_mode:"HTML",
-      link_preview_options:{is_disabled:true},
-      reply_markup:{inline_keyboard:[[
-        {text:"Открыть тест",web_app:{url:miniPublicLaunchUrl_()}}
-      ]]}
-    });
+    const accessMode=String(props.getProperty("MINI_ACCESS_MODE")||"pilot").trim();
+    const isTester=String(user.id)===String(props.getProperty("TEST_CHAT_ID"));
+    if(accessMode!=="public" && accessMode!=="pilot")
+      throw new Error("Неверный режим MINI_ACCESS_MODE.");
+    // Пока идёт пилот, новые пользователи могут подписаться на рассылку,
+    // но не получают кнопку на незавершённый тест.
+    const reply=accessMode==="public" || isTester
+      ? {
+        chat_id:user.id,
+        text:miniLauncherText_(),
+        parse_mode:"HTML",
+        link_preview_options:{is_disabled:true},
+        reply_markup:{inline_keyboard:[[
+          {text:"Открыть тест",web_app:{url:miniPublicLaunchUrl_()}}
+        ]]}
+      }
+      : {
+        chat_id:user.id,
+        text:"Новый тест по русскому языку от канала "+
+          "<a href=\"https://t.me/posttsop\">вы́Читать</a> пока готовится. "+
+          "Когда выйдет новый выпуск, пришлём кнопку «Открыть тест».",
+        parse_mode:"HTML",
+        link_preview_options:{is_disabled:true}
+      };
+    miniTelegramRequest_("sendMessage",props.getProperty("BOT_TOKEN"),reply);
     if(Number.isSafeInteger(updateId))
       props.setProperty("MINI_LAST_START_UPDATE_ID",String(updateId));
   }catch(error){
@@ -1098,8 +1114,9 @@ function prepareMiniLauncherWebhook() {
 function activateMiniLauncherWebhook() {
   miniRequireOwnerRun_();
   const props=miniProps_();
-  if(String(props.getProperty("MINI_ACCESS_MODE"))!=="public")
-    throw new Error("Сначала включи MINI_ACCESS_MODE=public.");
+  const mode=String(props.getProperty("MINI_ACCESS_MODE")||"pilot").trim();
+  if(mode!=="public" && mode!=="pilot")
+    throw new Error("MINI_ACCESS_MODE должен быть pilot или public.");
   const key=String(props.getProperty("MINI_LAUNCHER_WEBHOOK_KEY")||"");
   if(!/^[a-f0-9]{64}$/.test(key))
     throw new Error("Сначала запусти prepareMiniLauncherWebhook.");
@@ -1120,8 +1137,11 @@ function activateMiniLauncherWebhook() {
     max_connections:1,
     drop_pending_updates:false
   });
-  console.log("PASS: Telegram /start теперь обслуживает новый launcher; "+
-    "старые команды перестали поступать в прежний GAS.");
+  // Старые команды больше не нужны ни в пилоте, ни в публичном режиме.
+  miniTelegramRequest_("setMyCommands",token,{
+    commands:[{command:"start",description:"Открыть тест"}]
+  });
+  console.log("PASS: Telegram /start переведён на новый GAS (режим "+mode+").");
 }
 
 /** Проверяет состояние webhook без раскрытия URL или секретного ключа. */
