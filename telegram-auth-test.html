@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Проверка Telegram — вы́Читать</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .field{display:block;width:100%;padding:14px;background:#fff;border:1px solid #d8d0c3;font-size:14px}
+    h1{font-size:clamp(40px,10vw,57px)}
+    .status{padding:19px 17px;margin-top:21px;background:#fffcf7;border:1px solid #d8d0c3;line-height:1.5;font-size:14px;white-space:pre-wrap}
+    .note{font-size:12px;color:#77746d;line-height:1.5}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="site-header"><div class="wordmark">вы́<span>Читать</span><span class="mark-dot">.</span></div><div class="header-tag">TELEGRAM / ТЕСТ</div></header>
+  <main class="screen">
+    <div class="eyebrow"><span class="eyebrow-line"></span> Этап 4 · Telegram ID</div>
+    <h1>Кто проходит тест?</h1>
+    <p class="lead">Проверяем, что сервер узнаёт участника именно по подписанным данным Telegram, а не по имени, которое можно подменить.</p>
+    <label for="url"><strong>URL нашего GAS (/exec)</strong></label>
+    <input id="url" class="field" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+    <button class="primary-btn" id="check" type="button">Проверить Telegram <span aria-hidden="true">→</span></button>
+    <div id="output" class="status" role="status" aria-live="polite">Проверка не началась.</div>
+    <p class="note">Эта страница предназначена для открытия внутри Telegram-бота. В обычном браузере данные Telegram отсутствуют. Не вставляй токен бота — нужен только URL GAS.</p>
+  </main>
+  <footer class="site-footer"><span>вы́Читать · тест</span><a href="./">На главную</a></footer>
+</div>
+<script>
+"use strict";
+const telegram = window.Telegram && window.Telegram.WebApp;
+try { if(telegram) { telegram.ready(); telegram.expand(); } } catch (_) {}
+const button = document.getElementById("check");
+const output = document.getElementById("output");
+function trustedGoogle(origin){
+  try {
+    const u=new URL(origin);
+    return u.protocol==="https:" && (
+      u.hostname==="script.google.com" ||
+      u.hostname==="script.googleusercontent.com" ||
+      u.hostname.endsWith(".googleusercontent.com")
+    );
+  } catch (_) { return false; }
+}
+button.addEventListener("click", () => {
+  const url=document.getElementById("url").value.trim().replace(/\/+$/, "");
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)) {
+    output.textContent="Вставь корректный URL GAS, заканчивающийся на /exec.";return;
+  }
+  const initData=telegram && telegram.initData;
+  if (!initData) {
+    output.textContent="Нет подписанных данных Telegram. Нужно открыть приложение через кнопку Mini App внутри нашего бота.";return;
+  }
+  button.disabled=true; output.textContent="Передаю подписанные данные на сервер для проверки…";
+  const frame=document.createElement("iframe");
+  frame.src=url;
+  frame.style.cssText="position:absolute;left:-10000px;width:1px;height:1px;border:0";
+  frame.setAttribute("aria-hidden","true");
+  frame.title="Telegram Auth bridge";
+  const bytes=crypto.getRandomValues(new Uint8Array(24));
+  const id=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+  let done=false;
+  const timer=setTimeout(()=>{ if(!done){output.textContent="Не дождались ответа GAS. Проверь развёртывание.";finish();}},20000);
+  function finish(){
+    done=true;clearTimeout(timer);window.removeEventListener("message",onMessage);frame.remove();button.disabled=false;
+  }
+  function onMessage(event){
+    if (!trustedGoogle(event.origin) || !event.data || typeof event.data!=="object") return;
+    if (event.data.type==="quizAuthReady") {
+      event.source.postMessage({type:"quizAuthRequest",requestId:id,initData:initData},event.origin);
+    } else if (event.data.type==="quizAuthResult" && event.data.requestId===id) {
+      const result=event.data.result;
+      if (result && result.ok===true) {
+        output.textContent="✓ Telegram подтвердил личность участника.\nДобро пожаловать, " +
+          String(result.name||"участник") + "!\nНастоящие ответы пока не сохраняются.";
+      } else {
+        output.textContent="Проверка не пройдена: "+String(result?.error||"Неизвестная ошибка");
+      }
+      finish();
+    }
+  }
+  window.addEventListener("message",onMessage);
+  document.body.appendChild(frame);
+});
+</script>
+</body>
+</html>
