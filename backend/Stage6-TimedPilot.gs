@@ -714,7 +714,9 @@ function miniSendInvitationsBatch_() {
   const run=miniActiveRun_();
   const book=miniSheetFile_();
   const old=book.getSheetByName("Участники");
-  if (!old) throw new Error("Не найден список «Участники» старого бота");
+  const launcherContacts=book.getSheetByName("Мини_БотКонтакты");
+  if (!old && !launcherContacts)
+    throw new Error("Нет списка участников старого или нового бота.");
   const lock=LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -727,25 +729,31 @@ function miniSendInvitationsBatch_() {
     const previous=log.getLastRow()>1
       ? log.getRange(2,1,log.getLastRow()-1,3).getValues() : [];
     const sentIds=new Set(previous.filter(r=>String(r[0])===run.id).map(r=>String(r[1])));
-    const last=old.getLastRow();
-    const data=last>1?old.getRange(2,1,last-1,2).getValues():[];
     const targets=[];
     const seen=new Set();
-    data.forEach(r=>{
-      const id=String(r[0]).trim(),active=String(r[1]).toLowerCase()==="true";
+    function addTarget(id,active) {
+      id=String(id).trim();
       if (active && /^[1-9]\d{3,15}$/.test(id) &&
           !seen.has(id) && !sentIds.has(id)) {
         targets.push(id);seen.add(id);
       }
-    });
+    }
+    if(old && old.getLastRow()>1){
+      old.getRange(2,1,old.getLastRow()-1,2).getValues()
+        .forEach(r=>addTarget(r[0],String(r[1]).toLowerCase()==="true"));
+    }
+    if(launcherContacts && launcherContacts.getLastRow()>1){
+      launcherContacts.getRange(2,1,launcherContacts.getLastRow()-1,5).getValues()
+        .forEach(r=>addTarget(r[0],String(r[4]).toLowerCase()==="active"));
+    }
     const app=miniPublicLaunchUrl_();
     let success=0, errors=0;
     for(const id of targets.slice(0,20)){
       try {
         miniTelegramRequest_("sendMessage",token,{
-          chat_id:id,text:"«вы́Читать»: вышел новый тест по русскому языку. " +
-          "Все шесть вопросов доступны сразу. Попробуешь?",
-          reply_markup:{inline_keyboard:[[{text:"Пройти тест",web_app:{url:app}}]]}
+          chat_id:id,text:"Вышел новый тест по русскому языку от канала вы́Читать. " +
+          "Шесть вопросов, одна попытка. Проверишь себя?",
+          reply_markup:{inline_keyboard:[[{text:"Открыть тест",web_app:{url:app}}]]}
         });
         log.appendRow([run.id,id,new Date()]);
         success++;
