@@ -54,7 +54,7 @@ function miniAdminStats_(run, peopleRows, answerRows) {
   return {
     id, created: new Date(run[1]), statsAt: new Date(run[2]), status: String(run[3]),
     started: users.size, complete, incomplete: users.size - complete,
-    average: complete ? Math.round(100 * sum / complete) / 100 : 0,
+    average: complete ? Math.round(100 * sum / complete) / 100 : "—",
     perQuestion, distribution
   };
 }
