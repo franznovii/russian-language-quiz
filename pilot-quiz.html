@@ -113,7 +113,7 @@ const telegram=window.Telegram?.WebApp || null;
 try { telegram?.ready(); telegram?.expand(); } catch (_) {}
 const el=id=>document.getElementById(id);
 const screens=["connect-screen","intro-screen","question-screen","finish-screen"];
-let frame=null,bridgeReady=false,serverOrigin="",requestSerial=0;
+let frame=null,bridgeReady=false,serverOrigin="",bridgeSource=null;
 const pending=new Map();
 let currentState=null,currentIndex=0,selection=new Set(),showingFeedback=false;
 const jokes=[
@@ -144,7 +144,7 @@ function logError(id,message){el(id).textContent=message;el(id).classList.add("s
 function connect(url) {
   return new Promise((resolve,reject)=>{
     if(frame){frame.remove();frame=null}
-    bridgeReady=false;
+    bridgeReady=false;bridgeSource=null;serverOrigin="";
     const timeout=setTimeout(()=>{reject(new Error("GAS не ответил за 25 секунд"));},25000);
     const f=document.createElement("iframe");
     frame=f;
@@ -164,7 +164,7 @@ window.addEventListener("message",event=>{
   if(!trustGoogle(event.origin)||!event.data||typeof event.data!=="object")return;
   const msg=event.data;
   if(msg.type==="miniReady"){
-    if(frame){serverOrigin=event.origin;bridgeReady=true}
+    if(frame){serverOrigin=event.origin;bridgeSource=event.source;bridgeReady=true}
   } else if(msg.type==="miniResponse" && typeof msg.requestId==="string" && pending.has(msg.requestId)){
     const task=pending.get(msg.requestId);pending.delete(msg.requestId);
     clearTimeout(task.timer);
@@ -174,11 +174,11 @@ window.addEventListener("message",event=>{
 });
 function call(action,payload) {
   return new Promise((resolve,reject)=>{
-    if(!frame||!bridgeReady||!serverOrigin) return reject(new Error("Нет соединения с GAS"));
+    if(!frame||!bridgeReady||!serverOrigin||!bridgeSource) return reject(new Error("Нет соединения с GAS"));
     const id=randomId();
     const timer=setTimeout(()=>{pending.delete(id);reject(new Error("GAS не ответил за 30 секунд"));},30000);
     pending.set(id,{resolve,reject,timer});
-    frame.contentWindow.postMessage({
+    bridgeSource.postMessage({
       type:"miniRequest",requestId:id,action,
       initData:telegram.initData,payload:payload || null
     },serverOrigin);
