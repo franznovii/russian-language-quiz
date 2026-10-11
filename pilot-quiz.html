@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f5f1e9">
+  <title>Тест по русскому — вы́Читать</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .mini-screen[hidden] {display:none !important}
+    .mini-screen {padding-top:35px;animation:enter .2s ease-out}
+    .test-label {color:var(--accent);font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:800}
+    .setup-card {background:var(--card);border:1px solid var(--line);padding:18px;margin-top:23px}
+    .setup-card label {display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+    .setup-card input {width:100%;font-size:13px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:0;color:var(--ink)}
+    .setup-card p {color:var(--muted);font-size:12px;line-height:1.5;margin-bottom:0}
+    .notice {background:#fff8e8;border-left:3px solid var(--accent);padding:14px 16px;font-size:13px;line-height:1.5;margin:14px 0}
+    .loader {padding:12px 0;color:var(--muted);font-size:13px;min-height:20px}
+    .status-error {color:#a12d21}
+    .hero-accent {color:var(--accent);font-style:italic}
+    .resume {color:var(--muted);font-size:13px;line-height:1.5}
+    .description-text {background:#ebe4d9;padding:18px 19px;border-left:3px solid var(--accent);white-space:pre-wrap;line-height:1.6;font-size:14px;margin:15px 0 25px}
+    .quiz-head {display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--muted)}
+    .quiz-progress {width:100%;height:5px;background:var(--line);margin:15px 0 29px;overflow:hidden}
+    .quiz-progress > div {height:100%;background:var(--accent);transition:width .25s ease}
+    .question-options {display:grid;gap:10px;margin:18px 0}
+    .question-choice {border:1px solid var(--line);background:var(--card);min-height:60px;width:100%;padding:12px 15px;display:flex;align-items:center;gap:15px;text-align:left;cursor:pointer;color:var(--ink);font-size:15px;line-height:1.4}
+    .question-choice:disabled {opacity:1;cursor:default}
+    .question-choice.selected {background:#f7e4dc;border-color:var(--accent)}
+    .question-choice.right {background:#e8f0e6;border-color:var(--green)}
+    .question-choice.wrong {background:#f9e5e2;border-color:#ae5445}
+    .marker {width:30px;height:30px;min-width:30px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800}
+    .selected .marker {background:var(--accent);border-color:var(--accent);color:#fff}
+    .right .marker {background:var(--green);border-color:var(--green);color:#fff}
+    .explanation {border-left:3px solid var(--green);background:#e8f0e6;padding:16px 19px;margin:15px 0;font-size:14px;line-height:1.55}
+    .explanation.wrong {border-color:var(--accent);background:#f9e5e2}
+    .explanation strong {display:block;margin-bottom:4px}
+    .explanation p {margin:0}
+    .big-result {font-family:Georgia,serif;font-size:110px;letter-spacing:-.075em;line-height:1;color:var(--accent);margin:10px 0}
+    .big-result small {font-size:27px;letter-spacing:0}
+    .stats {display:grid;gap:18px;margin:23px 0}
+    .stats-head {display:flex;justify-content:space-between;font-size:13px;gap:10px;margin-bottom:8px}
+    .stats-track {height:10px;display:flex;gap:2px;overflow:hidden;background:var(--line);border-radius:10px}
+    .stats-good {background:var(--green)}
+    .stats-bad {background:var(--accent)}
+    .stat-caption {font-size:12px;line-height:1.5;color:var(--muted)}
+    h1 {font-size:clamp(45px,10vw,66px)}
+    h2 {font-size:clamp(33px,8vw,48px);margin:18px 0}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="site-header"><div class="wordmark">вы́<span>Читать</span><span class="mark-dot">.</span></div><div class="header-tag">РУССКИЙ ЯЗЫК</div></header>
+  <main>
+    <section class="mini-screen" id="connect-screen">
+      <div class="eyebrow"><span class="eyebrow-line"></span> Закрытая проверка</div>
+      <h1>Русский<br><span class="hero-accent">на практике.</span></h1>
+      <p class="lead">Шесть вопросов. Никакого таймера. Результат хранится в Google Таблице и связан только с твоим Telegram-аккаунтом.</p>
+      <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
+      <div class="setup-card">
+        <label for="gas-url">Адрес GAS для тестирования (/exec)</label>
+        <input id="gas-url" type="url" spellcheck="false" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+        <p>Только на этапе разработки. Здесь не нужен токен бота или какие-либо пароли. Позднее адрес будет подставляться автоматически.</p>
+      </div>
+      <button class="primary-btn" id="connect-btn" type="button">Подключить тест <span aria-hidden="true">→</span></button>
+      <div class="loader" id="connect-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="intro-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
+      <h1>Проверим<br><span class="hero-accent">грамотность?</span></h1>
+      <p class="lead" id="intro-greeting"></p>
+      <div class="intro-visual" aria-hidden="true">
+        <div class="big-letter">Я</div><span class="visual-note">Тут надо<br>подумать.</span><span class="visual-star">✳</span>
+      </div>
+      <div class="intro-facts"><span>06 вопросов</span><span>Без таймера</span><span>Одна попытка</span></div>
+      <p class="resume" id="resume-text"></p>
+      <button class="primary-btn" id="begin-btn" type="button">Начать <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="mini-screen" id="question-screen" hidden>
+      <div class="quiz-head"><span id="question-count">Вопрос 1/6</span><span id="question-type">ОДИН ОТВЕТ</span></div>
+      <div class="quiz-progress"><div id="progress"></div></div>
+      <h2 id="question-text"></h2>
+      <div id="description" class="description-text" hidden></div>
+      <div id="options" class="question-options" role="group" aria-label="Выбери ответ"></div>
+      <div class="explanation" id="explanation" hidden></div>
+      <button class="primary-btn" id="answer-btn" type="button" disabled>Проверить ответ <span aria-hidden="true">→</span></button>
+      <div class="loader" id="question-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="finish-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Всё вы́читано</div>
+      <h1>Вот и<br><span class="hero-accent">результат.</span></h1>
+      <div class="big-result"><span id="score">0</span> <small>из 6</small></div>
+      <p class="lead" id="result-joke"></p>
+      <div id="stats-section" hidden>
+        <div class="eyebrow">Как справились остальные?</div>
+        <p class="stat-caption">Статистика на момент завершения. Только проценты, без количества участников.</p>
+        <div id="stats" class="stats"></div>
+      </div>
+      <div id="stats-pending" class="notice" hidden></div>
+      <div class="notice">Твои ответы сохранены. Повторно пройти этот же выпуск нельзя.</div>
+    </section>
+  </main>
+  <footer class="site-footer"><span>вы́Читать © 2026</span><span>Пилот Mini App</span></footer>
+</div>
+<script>
+"use strict";
+const telegram=window.Telegram?.WebApp || null;
+try { telegram?.ready(); telegram?.expand(); } catch (_) {}
+const el=id=>document.getElementById(id);
+const screens=["connect-screen","intro-screen","question-screen","finish-screen"];
+let frame=null,bridgeReady=false,serverOrigin="",requestSerial=0;
+const pending=new Map();
+let currentState=null,currentIndex=0,selection=new Set(),showingFeedback=false;
+const jokes=[
+  "Ты последовательно отстаивал альтернативную орфографию.",
+  "Один правильный ответ. Остальные пока в авторской редакции.",
+  "Между тобой и русским языком есть искра. Пока в основном от трения.",
+  "Половина тебя — корректор. Вторая половина мешает ему работать.",
+  "Две ошибки оставлены специально, чтобы редактору было чем заняться.",
+  "Одна ошибка — это уже не безграмотность, а сюжетный поворот.",
+  "Всё правильно. Теперь можешь исправлять админа."
+];
+
+function show(screen){screens.forEach(s=>{el(s).hidden=s!==screen});window.scrollTo(0,0)}
+function trustGoogle(origin){
+  try {
+    const u=new URL(origin);
+    return u.protocol==="https:" && (
+      u.hostname==="script.google.com"||
+      u.hostname==="script.googleusercontent.com"||
+      u.hostname.endsWith(".googleusercontent.com")
+    );
+  }catch(_){return false}
+}
+function randomId(){
+  return Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function logError(id,message){el(id).textContent=message;el(id).classList.add("status-error")}
+function connect(url) {
+  return new Promise((resolve,reject)=>{
+    if(frame){frame.remove();frame=null}
+    bridgeReady=false;
+    const timeout=setTimeout(()=>{reject(new Error("GAS не ответил за 25 секунд"));},25000);
+    const f=document.createElement("iframe");
+    frame=f;
+    f.title="GAS Quiz Bridge";f.setAttribute("aria-hidden","true");
+    f.style.cssText="position:absolute;left:-10000px;width:1px;height:1px;border:0";
+    f.src=url;
+    f.onerror=()=>{clearTimeout(timeout);reject(new Error("Не удалось открыть GAS"))};
+    function onReady(){
+      if(bridgeReady){clearTimeout(timeout);resolve()}
+      else setTimeout(onReady,60);
+    }
+    document.body.appendChild(f);
+    onReady();
+  });
+}
+window.addEventListener("message",event=>{
+  if(!trustGoogle(event.origin)||!event.data||typeof event.data!=="object")return;
+  const msg=event.data;
+  if(msg.type==="miniReady"){
+    if(frame){serverOrigin=event.origin;bridgeReady=true}
+  } else if(msg.type==="miniResponse" && typeof msg.requestId==="string" && pending.has(msg.requestId)){
+    const task=pending.get(msg.requestId);pending.delete(msg.requestId);
+    clearTimeout(task.timer);
+    if(!msg.data || msg.data.ok!==true)task.reject(new Error(String(msg.data?.error || "Ошибка GAS")));
+    else task.resolve(msg.data);
+  }
+});
+function call(action,payload) {
+  return new Promise((resolve,reject)=>{
+    if(!frame||!bridgeReady||!serverOrigin) return reject(new Error("Нет соединения с GAS"));
+    const id=randomId();
+    const timer=setTimeout(()=>{pending.delete(id);reject(new Error("GAS не ответил за 30 секунд"));},30000);
+    pending.set(id,{resolve,reject,timer});
+    frame.contentWindow.postMessage({
+      type:"miniRequest",requestId:id,action,
+      initData:telegram.initData,payload:payload || null
+    },serverOrigin);
+  });
+}
+async function initialize(){
+  const url=el("gas-url").value.trim().replace(/\/+$/,"");
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)){
+    logError("connect-status","Нужен URL опубликованного GAS с окончанием /exec.");return;
+  }
+  if(!telegram?.initData){
+    el("telegram-notice").hidden=false;
+    logError("connect-status","Нет данных Telegram. Открой страницу из Mini App кнопки бота.");return;
+  }
+  el("connect-btn").disabled=true;
+  el("connect-status").classList.remove("status-error");
+  el("connect-status").textContent="Подключаюсь к GAS…";
+  try{
+    await connect(url);
+    el("connect-status").textContent="Проверяю Telegram и загружаю вопросы…";
+    currentState=await call("state");
+    try{localStorage.setItem("mini-gas-url",url)}catch(_){}
+    showInitialState();
+  }catch(e){
+    logError("connect-status",String(e.message||e));
+  }finally{el("connect-btn").disabled=false}
+}
+function showInitialState(){
+  if(currentState.complete){renderFinish();return}
+  el("intro-greeting").textContent="Привет, "+currentState.userName+"! Один или несколько верных вариантов — внимательно читай каждое задание.";
+  const n=currentState.answers.length;
+  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Продолжим с того же места." : "После каждого ответа покажем правильный вариант и объяснение.";
+  el("begin-btn").firstChild.textContent=n?"Продолжить тест ":"Начать тест ";
+  show("intro-screen");
+}
+function renderQuestion(){
+  showingFeedback=false;selection=new Set();
+  currentIndex=currentState.answers.length;
+  const q=currentState.questions[currentIndex];
+  if(!q){renderFinish();return}
+  el("question-count").textContent="Вопрос "+q.id+"/6";
+  el("question-type").textContent=q.multiple?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
+  el("progress").style.width=((currentIndex/6)*100)+"%";
+  el("question-text").textContent=q.text;
+  el("description").hidden=!q.description;
+  el("description").textContent=q.description || "";
+  el("explanation").hidden=true;
+  el("question-status").textContent="";
+  el("options").replaceChildren();
+  q.options.forEach((value,i)=>{
+    const button=document.createElement("button");
+    button.type="button";button.className="question-choice";button.setAttribute("aria-pressed","false");
+    const marker=document.createElement("span");marker.className="marker";marker.textContent=String.fromCharCode(65+i);marker.setAttribute("aria-hidden","true");
+    const text=document.createElement("span");text.textContent=value;
+    button.append(marker,text);
+    button.addEventListener("click",()=>choose(i,q.multiple));
+    el("options").appendChild(button);
+  });
+  el("answer-btn").disabled=true;
+  el("answer-btn").firstChild.textContent="Проверить ответ ";
+  show("question-screen");
+}
+function choose(i,multiple){
+  if(showingFeedback)return;
+  if(!multiple)selection=new Set([i]);
+  else if(selection.has(i))selection.delete(i);
+  else selection.add(i);
+  Array.from(el("options").children).forEach((b,n)=>{
+    const yes=selection.has(n);
+    b.classList.toggle("selected",yes);b.setAttribute("aria-pressed",yes?"true":"false");
+  });
+  el("answer-btn").disabled=selection.size===0;
+}
+function showFeedback(){
+  const q=currentState.questions[currentIndex];
+  const answer=currentState.answers.find(a=>a.questionId===q.id);
+  if(!answer){renderQuestion();return}
+  showingFeedback=true;
+  Array.from(el("options").children).forEach((b,i)=>{
+    b.disabled=true;
+    b.classList.toggle("selected",answer.selected.includes(i));
+    b.classList.toggle("right",answer.correctOptions.includes(i));
+    b.classList.toggle("wrong",answer.selected.includes(i)&&!answer.correctOptions.includes(i));
+  });
+  const box=el("explanation");box.replaceChildren();box.hidden=false;
+  box.classList.toggle("wrong",!answer.correct);
+  const title=document.createElement("strong");title.textContent=answer.correct?"Правильно.":"Не совсем.";
+  const desc=document.createElement("p");desc.textContent=answer.explanation||"Ответ сохранён.";
+  box.append(title,desc);
+  el("answer-btn").firstChild.textContent=currentState.complete?"Посмотреть результат ":"Следующий вопрос ";
+  el("answer-btn").disabled=false;
+}
+async function answer(){
+  if(showingFeedback){
+    if(currentState.complete)renderFinish();else renderQuestion();
+    return;
+  }
+  if(!selection.size)return;
+  el("answer-btn").disabled=true;
+  el("question-status").textContent="Сохраняю ответ…";
+  try{
+    const q=currentState.questions[currentIndex];
+    currentState=await call("answer",{questionId:q.id,selected:Array.from(selection)});
+    el("question-status").textContent="";
+    showFeedback();
+  }catch(e){
+    logError("question-status",String(e.message||e));
+    el("answer-btn").disabled=false;
+  }
+}
+function renderFinish(){
+  el("score").textContent=String(currentState.score??0);
+  el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
+  const stats=el("stats"),section=el("stats-section"),pendingBox=el("stats-pending");
+  stats.replaceChildren();
+  if(Array.isArray(currentState.statistics)){
+    section.hidden=false;pendingBox.hidden=true;
+    currentState.statistics.forEach(item=>{
+      const outer=document.createElement("div");
+      const head=document.createElement("div");head.className="stats-head";
+      const label=document.createElement("strong");label.textContent="Вопрос "+item.questionId;
+      const values=document.createElement("span");
+      values.textContent="Верно "+item.correctPercent+"% · Ошибки "+item.incorrectPercent+"%";
+      head.append(label,values);
+      const track=document.createElement("div");track.className="stats-track";
+      const good=document.createElement("div");good.className="stats-good";good.style.width=item.correctPercent+"%";
+      const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
+      track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
+    });
+  } else {
+    section.hidden=true;pendingBox.hidden=false;
+    pendingBox.textContent="Общая статистика появится после "+currentState.statisticsAt+" (МСК).";
+  }
+  show("finish-screen");
+}
+el("connect-btn").addEventListener("click",initialize);
+el("begin-btn").addEventListener("click",renderQuestion);
+el("answer-btn").addEventListener("click",answer);
+try {
+  const cached=localStorage.getItem("mini-gas-url");
+  if(cached)el("gas-url").value=cached;
+}catch(_){}
+if(!telegram?.initData)el("telegram-notice").hidden=false;
+</script>
+</body></html>
