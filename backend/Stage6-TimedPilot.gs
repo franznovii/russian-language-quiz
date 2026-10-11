@@ -264,6 +264,8 @@ function miniApi(action, initData, payload) {
         String(person.id) !== String(miniProps_().getProperty("TEST_CHAT_ID"))) {
       return {ok: false, error: "Сейчас тест доступен только администратору."};
     }
+    // Отправка результата только по явному запросу прошедшего все 6 вопросов.
+    if (action === "share") return miniPrepareSharedResult_(person);
     let state;
     if (action === "state" || action === "checkSubscription")
       state = miniStateFor_(person);
@@ -595,6 +597,54 @@ function sendTimedPilotButton() {
   console.log("PASS: кнопка с таймером отправлена администратору.");
 }
 
+
+/**
+ * Создаёт красивое пересылаемое сообщение с правильными ссылками:
+ * канал вы́Читать — кликабельный текст; бот — кнопка «Открыть тест».
+ * Получатель запускает бота, а обработчик /start показывает кнопку Web App.
+ * В Mini App используется WebApp.shareMessage; fallback в старых клиентах
+ * построен на share/url.
+ */
+function miniPrepareSharedResult_(user) {
+  const run=miniActiveRun_();
+  const answers=miniAnswersFor_(run,user);
+  if (answers.length!==run.questions.length)
+    return {ok:false,error:"Сначала заверши все шесть вопросов."};
+  const score=answers.filter(x=>x.v[4]===true ||
+    String(x.v[4]).toUpperCase()==="TRUE").length;
+  const token=miniProps_().getProperty("BOT_TOKEN");
+  if (!token) return {ok:false,error:"Не настроен BOT_TOKEN"};
+  const botUrl="https://t.me/posttsop_test_bot?start=quiz";
+  const message="Я набрал <b>"+score+" из 6</b> в тесте канала "+
+    "<a href=\"https://t.me/posttsop\">вы́Читать</a> по русскому языку.\n"+
+    "А ты справишься лучше?\n\n"+
+    "<a href=\""+botUrl+"\">Пройти тест</a>";
+  try {
+    const saved=miniTelegramRequest_("savePreparedInlineMessage",token,{
+      user_id:Number(user.id),
+      result:{
+        type:"article",
+        id:"quiz_"+String(Utilities.getUuid()).replace(/-/g,"").slice(0,35),
+        title:"Мой результат в тесте вы́Читать",
+        input_message_content:{
+          message_text:message,parse_mode:"HTML",
+          link_preview_options:{is_disabled:true}
+        },
+        reply_markup:{inline_keyboard:[[{
+          text:"Открыть тест",url:botUrl
+        }]]}
+      },
+      allow_user_chats:true,allow_group_chats:true,
+      allow_bot_chats:false,allow_channel_chats:false
+    });
+    if(!saved.result || typeof saved.result.id!=="string")
+      return {ok:false,error:"Telegram не вернул идентификатор сообщения."};
+    return {ok:true,shareId:saved.result.id};
+  } catch(e) {
+    console.warn("Mini App share: could not prepare Telegram message.");
+    return {ok:false,error:"Не удалось подготовить сообщение в Telegram."};
+  }
+}
 
 /**
  * Служебные инструменты ПОДГОТОВКИ публичного выпуска.
