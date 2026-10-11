@@ -16,8 +16,9 @@
  * Реальные ответы проверяет сервер; публичные JS и HTML НЕ содержат ключей.
  *
  * Мини-приложение может работать в режимах pilot (по умолчанию) и public.
- * Вечерних рассылок нет: после 19:00 МСК статистика видна при открытии
- * завершённого теста, а администратор публикует итоги самостоятельно.
+ * Вечерних рассылок нет: после 19:00 МСК статистика видна только
+ * завершившим тест подписчикам канала вы́Читать; проверка членства
+ * проводится на сервере через Telegram getChatMember.
  */
 
 const MAX_INITDATA_LENGTH = 12000;
@@ -30,7 +31,9 @@ const MINI = Object.freeze({
   peopleSheet: "Мини_Участники",
   answersSheet: "Мини_Ответы",
   timersSheet: "Мини_Таймеры",
-  questionSheet: "Мини_Вопросы"
+  questionSheet: "Мини_Вопросы",
+  channelUsername: "@posttsop",
+  channelUrl: "https://t.me/posttsop"
 });
 const MINI_QUESTION_HEADERS = Object.freeze([
   "№", "Когда отправить (МСК)", "Описание", "Вопрос",
@@ -261,11 +264,16 @@ function miniApi(action, initData, payload) {
         String(person.id) !== String(miniProps_().getProperty("TEST_CHAT_ID"))) {
       return {ok: false, error: "Сейчас тест доступен только администратору."};
     }
-    if (action === "state") return miniStateFor_(person);
-    if (action === "open") return miniOpenFor_(person);
-    if (action === "answer") return miniAnswerFor_(person, payload);
-    if (action === "expire") return miniExpireFor_(person);
-    return {ok: false, error: "Неизвестная операция"};
+    let state;
+    if (action === "state" || action === "checkSubscription")
+      state = miniStateFor_(person);
+    else if (action === "open") state = miniOpenFor_(person);
+    else if (action === "answer") state = miniAnswerFor_(person, payload);
+    else if (action === "expire") state = miniExpireFor_(person);
+    else return {ok: false, error: "Неизвестная операция"};
+    // Проверка членства и вычисление статистики за пределами lock.
+    // Ни один ответ API не содержит статистику до успешной проверки.
+    return miniApplySubscriptionGate_(person, state);
   } catch (error) {
     console.warn("Mini App: " + String(error.message || error));
     return {ok: false, error: "Запрос отклонён. Перезапусти Mini App или проверь настройки GAS."};
@@ -364,7 +372,7 @@ function miniBuildState_(run, user) {
     };
   });
   const complete = answers.length === run.questions.length;
-  const statsVisible = complete && Date.now() >= run.statsAt;
+  const statsReady = complete && Date.now() >= run.statsAt;
   const nextQuestion = run.questions[answers.length];
   const clock = nextQuestion ? miniTimerFor_(run,user,nextQuestion.id) : null;
   return {
@@ -390,7 +398,9 @@ function miniBuildState_(run, user) {
     } : null,
     complete: complete,
     score: complete ? answers.filter(a => a.correct).length : null,
-    statistics: statsVisible ? miniStatistics_(run) : null,
+    statistics: null,
+    subscriptionStatus: statsReady ? "checking" : "not_due",
+    statsReady: statsReady,
     statisticsAt: Utilities.formatDate(new Date(run.statsAt), MINI.tz, "dd.MM.yyyy HH:mm")
   };
 }
@@ -436,6 +446,75 @@ function miniAnswerFor_(user, payload) {
     SpreadsheetApp.flush();
     return miniBuildState_(run, user);
   } finally { lock.releaseLock(); }
+}
+
+/**
+ * Проверка членства в публичном канале вы́Читать.
+ * Срок действия auth Telegram проверяется miniApi ПЕРЕД этим вызовом.
+ * Ошибки сети не превращаются в «не подписан».
+ */
+function miniCheckChannelMember_(userId) {
+  const token=miniProps_().getProperty("BOT_TOKEN");
+  if (!token) return "unavailable";
+  try {
+    const response=UrlFetchApp.fetch(
+      "https://api.telegram.org/bot"+token+"/getChatMember",{
+        method:"post",contentType:"application/json",
+        payload:JSON.stringify({chat_id:MINI.channelUsername,user_id:Number(userId)}),
+        muteHttpExceptions:true
+      }
+    );
+    const body=JSON.parse(response.getContentText());
+    if (!body || body.ok!==true || !body.result ||
+        typeof body.result.status!=="string") {
+      console.warn("Channel membership: Telegram did not confirm status. HTTP "+
+        response.getResponseCode());
+      return "unavailable";
+    }
+    const member=body.result;
+    if (member.status==="creator" || member.status==="administrator" ||
+        member.status==="member" ||
+        (member.status==="restricted" && member.is_member===true)) return "member";
+    if (member.status==="left" || member.status==="kicked" ||
+        (member.status==="restricted" && member.is_member===false)) return "required";
+    return "unavailable";
+  } catch(error) {
+    console.warn("Channel membership: service temporarily unavailable.");
+    return "unavailable";
+  }
+}
+
+/**
+ * Дополняет состояние закрытыми процентами только после проверки подписки.
+ * Выполняется отдельно от блокировки таблицы.
+ */
+function miniApplySubscriptionGate_(user,state) {
+  if (!state || state.ok!==true || !state.complete || !state.statsReady)
+    return state;
+  state.subscriptionStatus=miniCheckChannelMember_(user.id);
+  if (state.subscriptionStatus!=="member") return state;
+  const entry=miniRows_(MINI.runSheet).find(r=>String(r.v[0])===String(state.runId));
+  if (!entry) {
+    state.subscriptionStatus="unavailable";
+    return state;
+  }
+  const run={id:String(entry.v[0]),questions:JSON.parse(String(entry.v[4]))};
+  state.statistics=miniStatistics_(run);
+  return state;
+}
+
+/** Ручная проверка из редактора GAS, без публикации и рассылок. */
+function checkMiniChannelSetup() {
+  miniRequireOwnerRun_();
+  const id=String(miniProps_().getProperty("TEST_CHAT_ID") || "").trim();
+  if (!/^[1-9]\d{3,15}$/.test(id))
+    throw new Error("Не заполнен TEST_CHAT_ID.");
+  const result=miniCheckChannelMember_(id);
+  if (result!=="member")
+    throw new Error(result==="unavailable"
+      ? "Telegram не подтвердил доступ к каналу. Проверь права бота."
+      : "Тестовый пользователь пока не подписан на вы́Читать.");
+  console.log("PASS: бот видит подписку тестового аккаунта на вы́Читать.");
 }
 
 function miniStatistics_(run) {
