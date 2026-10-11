@@ -137,6 +137,11 @@ function setupMiniTimedPilot() {
  */
 function startNewTimedPilot() {
   miniRequireOwnerRun_();
+  return miniCreateNewEdition_();
+}
+
+/** Закрытый служебный метод для ручного запуска и недельного триггера. */
+function miniCreateNewEdition_() {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -564,6 +569,9 @@ function configureMiniBotMenu() {
  */
 function sendMiniInvitationsBatch() {
   miniRequireOwnerRun_();
+  return miniSendInvitationsBatch_();
+}
+function miniSendInvitationsBatch_() {
   const props=miniProps_();
   if (String(props.getProperty("MINI_ACCESS_MODE")) !== "public" ||
       String(props.getProperty("MINI_INVITES_ENABLED")) !== "yes") {
@@ -620,7 +628,54 @@ function sendMiniInvitationsBatch() {
     console.log("PASS: приглашений отправлено " + success +
       "; ошибок " + errors + "; осталось к отправке до " +
       (targets.length-success) + ". Повтори отправку при необходимости.");
+    return {sent:success,errors,remaining:targets.length-success};
   } finally {lock.releaseLock();}
+}
+
+
+/**
+ * Подготовка еженедельного запуска. Один раз запусти из редактора GAS
+ * installMiniTuesdayTrigger() ПОСЛЕ отключения старого расписания опросов.
+ * По вторникам примерно в 10:00 МСК проверяется флаг MINI_WEEKLY_ENABLED=yes.
+ * Пока флаг не выставлен, никаких новых выпусков и сообщений не будет.
+ */
+function installMiniTuesdayTrigger() {
+  miniRequireOwnerRun_();
+  const exists=ScriptApp.getProjectTriggers().some(t =>
+    t.getHandlerFunction()==="miniTuesdayLaunch_");
+  if (exists) {
+    console.log("PASS: триггер на вторник уже установлен.");
+    return;
+  }
+  ScriptApp.newTrigger("miniTuesdayLaunch_").timeBased()
+    .onWeekDay(ScriptApp.WeekDay.TUESDAY).atHour(10)
+    .everyWeeks(1).inTimezone(MINI.tz).create();
+  console.log("PASS: подготовлен недельный триггер около 10:00 МСК во вторник. " +
+    "Срабатывание возможно только при MINI_WEEKLY_ENABLED=yes.");
+}
+
+/** Служебная (не вызывается из публичного Mini App) функция для time trigger. */
+function miniTuesdayLaunch_() {
+  const props=miniProps_();
+  if (String(props.getProperty("MINI_WEEKLY_ENABLED"))!=="yes" ||
+      String(props.getProperty("MINI_ACCESS_MODE"))!=="public") {
+    console.log("Автозапуск выключен, ничего не отправлено.");
+    return;
+  }
+  const now=new Date();
+  const day=Utilities.formatDate(now,MINI.tz,"yyyy-MM-dd");
+  // Полдень по Москве, чтобы определять день недели без зависимости от UTC.
+  if (new Date(day+"T12:00:00+03:00").getUTCDay()!==2) return;
+  const already=miniRows_(MINI.runSheet).some(row =>
+    String(row.v[3])==="ACTIVE" &&
+    Utilities.formatDate(new Date(row.v[1]),MINI.tz,"yyyy-MM-dd")===day);
+  if (!already) miniCreateNewEdition_();
+  // Доставка — только если явно включены адресные приглашения.
+  if (String(props.getProperty("MINI_INVITES_ENABLED"))==="yes") {
+    const sent=miniSendInvitationsBatch_();
+    console.log("Вторник: отправлено приглашений "+sent.sent+
+      "; осталось "+sent.remaining+".");
+  }
 }
 
 // Telegram initData verifier: source Stage4, already tested with real Telegram.
