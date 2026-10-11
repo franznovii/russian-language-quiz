@@ -725,18 +725,21 @@ function miniSendInvitationsBatch_() {
     let log=book.getSheetByName("Мини_Приглашения");
     if (!log) {
       log=book.insertSheet("Мини_Приглашения");
-      log.getRange(1,1,1,3).setValues([["run_id","telegram_id","sent_at"]]);
+      log.getRange(1,1,1,4).setValues([["run_id","telegram_id","sent_at","status"]]);
       log.setFrozenRows(1);
+    } else if(!String(log.getRange(1,4).getValue()).trim()){
+      log.getRange(1,4).setValue("status");
     }
     const previous=log.getLastRow()>1
-      ? log.getRange(2,1,log.getLastRow()-1,3).getValues() : [];
+      ? log.getRange(2,1,log.getLastRow()-1,4).getValues() : [];
     const sentIds=new Set(previous.filter(r=>String(r[0])===run.id).map(r=>String(r[1])));
+    const blockedIds=new Set(previous.filter(r=>String(r[3])==="blocked").map(r=>String(r[1])));
     const targets=[];
     const seen=new Set();
     function addTarget(id,active) {
       id=String(id).trim();
       if (active && /^[1-9]\d{3,15}$/.test(id) &&
-          !seen.has(id) && !sentIds.has(id)) {
+          !seen.has(id) && !sentIds.has(id) && !blockedIds.has(id)) {
         targets.push(id);seen.add(id);
       }
     }
@@ -757,15 +760,21 @@ function miniSendInvitationsBatch_() {
           "Шесть вопросов, одна попытка. Проверишь себя?",
           reply_markup:{inline_keyboard:[[{text:"Открыть тест",web_app:{url:app}}]]}
         });
-        log.appendRow([run.id,id,new Date()]);
+        log.appendRow([run.id,id,new Date(),"sent"]);
         success++;
         // Мягкое ограничение скорости Telegram: не более примерно 10/сек.
         Utilities.sleep(100);
       } catch(e) {
         errors++;
-        console.warn("Mini App invite: " + String(e.message||e)
-          .replace(token,"[TOKEN]"));
-        if (/429|Too Many Requests|retry after/i.test(String(e.message||e))) break;
+        const problem=String(e.message||e);
+        console.warn("Mini App invite: " + problem.replace(token,"[TOKEN]"));
+        // Пользователь заблокировал бота или удалил аккаунт.
+        // Не пытаемся слать ему приглашения каждый следующий час.
+        if (/403|bot was blocked|user is deactivated|chat not found/i.test(problem)) {
+          log.appendRow([run.id,id,new Date(),"blocked"]);
+          continue;
+        }
+        if (/429|Too Many Requests|retry after/i.test(problem)) break;
       }
     }
     console.log("PASS: приглашений отправлено " + success +
