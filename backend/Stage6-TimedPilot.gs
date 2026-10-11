@@ -700,7 +700,9 @@ function configureMiniBotMenu() {
  */
 function sendMiniInvitationsBatch() {
   miniRequireOwnerRun_();
-  return miniSendInvitationsBatch_();
+  const batch=miniSendInvitationsBatch_();
+  if(batch.remaining>0) miniScheduleInviteContinuation_();
+  return batch;
 }
 function miniSendInvitationsBatch_() {
   const props=miniProps_();
@@ -775,6 +777,52 @@ function miniSendInvitationsBatch_() {
 
 
 /**
+ * Автоматически продолжаем отправку, если в первом запуске больше 200
+ * зарегистрированных пользователей. Каждый следующий запуск через час.
+ * При выключенных флагах рассылок не будет.
+ */
+function miniScheduleInviteContinuation_() {
+  const exists=ScriptApp.getProjectTriggers().some(t=>
+    t.getHandlerFunction()==="miniContinueInvitations_");
+  if (exists) return;
+  ScriptApp.newTrigger("miniContinueInvitations_").timeBased()
+    .after(60*60*1000).create();
+  console.log("Очередь приглашений не закончилась. Продолжим через час.");
+}
+
+function miniSendPendingInvitations_() {
+  let total=0,remaining=0,errors=0;
+  for(let batch=0;batch<10;batch++){
+    const result=miniSendInvitationsBatch_();
+    total+=result.sent;
+    remaining=result.remaining;
+    errors+=result.errors;
+    if(!remaining || !result.sent || result.errors) break;
+  }
+  if(remaining>0) miniScheduleInviteContinuation_();
+  console.log("Приглашения: отправлено "+total+
+    ", осталось "+remaining+", ошибок "+errors+".");
+}
+
+function miniContinueInvitations_() {
+  // Одноразовый триггер завершается, чтобы следующий запуск можно было
+  // планировать по фактическому количеству ещё не приглашённых.
+  ScriptApp.getProjectTriggers().filter(t=>
+    t.getHandlerFunction()==="miniContinueInvitations_")
+    .forEach(t=>ScriptApp.deleteTrigger(t));
+  const props=miniProps_();
+  if(String(props.getProperty("MINI_ACCESS_MODE"))!=="public" ||
+     String(props.getProperty("MINI_INVITES_ENABLED"))!=="yes") return;
+  const run=miniActiveRun_();
+  const row=miniRows_(MINI.runSheet).find(x=>String(x.v[0])===run.id);
+  if(!row || Date.now()-new Date(row.v[1]).getTime()>7*86400000){
+    console.log("Очередь рассылки устарела, пропускаем.");
+    return;
+  }
+  miniSendPendingInvitations_();
+}
+
+/**
  * Подготовка еженедельного запуска. Один раз запусти из редактора GAS
  * installMiniTuesdayTrigger() ПОСЛЕ отключения старого расписания опросов.
  * По вторникам примерно в 10:00 МСК проверяется флаг MINI_WEEKLY_ENABLED=yes.
@@ -831,17 +879,8 @@ function miniTuesdayLaunch_() {
   }
   // Доставка — только если явно включены адресные приглашения.
   if (String(props.getProperty("MINI_INVITES_ENABLED"))==="yes") {
-    // За один запуск — не более 200 личных сообщений, с дедупликацией.
-    // Если получателей больше, запусти sendMiniInvitationsBatch вручную,
-    // либо добавь отдельный триггер на продолжение (до публичного старта).
-    let total=0,remaining=0;
-    for(let batch=0;batch<10;batch++){
-      const sent=miniSendInvitationsBatch_();
-      total+=sent.sent;remaining=sent.remaining;
-      if (!remaining || !sent.sent || sent.errors) break;
-    }
-    console.log("Вторник: отправлено приглашений "+total+
-      "; осталось "+remaining+".");
+    // До 200 сообщений за запуск; остаток автоматически отправим позже.
+    miniSendPendingInvitations_();
   }
 }
 
@@ -1070,4 +1109,21 @@ function activateMiniLauncherWebhook() {
   });
   console.log("PASS: Telegram /start теперь обслуживает новый launcher; "+
     "старые команды перестали поступать в прежний GAS.");
+}
+
+/** Проверяет состояние webhook без раскрытия URL или секретного ключа. */
+function checkMiniLauncherWebhook() {
+  miniRequireOwnerRun_();
+  const props=miniProps_();
+  const token=props.getProperty("BOT_TOKEN");
+  if(!token)throw new Error("Не указан BOT_TOKEN");
+  const info=miniTelegramRequest_("getWebhookInfo",token,{}).result||{};
+  const expected=String(props.getProperty("MINI_WEBAPP_URL")||"")+
+    "?mini_key="+String(props.getProperty("MINI_LAUNCHER_WEBHOOK_KEY")||"");
+  const ours=!!info.url && info.url===expected;
+  console.log("Webhook: "+(ours?"НОВЫЙ Mini App":"ещё старый или не настроен")+
+    "; очередь: "+(info.pending_update_count||0)+
+    "; последняя ошибка: "+String(info.last_error_message||"нет"));
+  return {ours:ours,pending:Number(info.pending_update_count||0),
+    lastError:String(info.last_error_message||"")};
 }
