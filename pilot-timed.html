@@ -117,7 +117,7 @@
       <div id="stats-pending" class="notice" hidden></div>
       <div id="stats-gate" class="subscription-panel" hidden>
         <h3>А остальные справились лучше?</h3>
-        <p>Узнай, какие вопросы оказались самыми сложными. Общая статистика доступна подписчикам канала вы́Читать после 19:00 МСК.</p>
+        <p id="subscription-description">Узнай, какие вопросы оказались самыми сложными. Подпишись на вы́Читать, чтобы увидеть общую статистику после 19:00 МСК.</p>
         <button id="subscribe-btn" class="primary-btn" type="button">Подписаться на вы́Читать <span aria-hidden="true">↗</span></button>
         <button id="check-subscription-btn" class="secondary-mini-btn" type="button">Я подписался — проверить подписку</button>
         <p id="subscription-status" class="subscription-message" role="status" aria-live="polite"></p>
@@ -398,6 +398,18 @@ async function answer(){
     el("answer-btn").disabled=false;
   }finally{requestBusy=false}
 }
+function statisticsWhen(){
+  const timestamp=String(currentState?.statisticsAt||"");
+  let today="";
+  try{
+    today=new Intl.DateTimeFormat("ru-RU",{
+      day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Moscow"
+    }).format(new Date());
+  }catch(_){}
+  return timestamp.slice(0,10)===today
+    ?"сегодня после 19:00 МСК"
+    :"после "+timestamp+" (МСК)";
+}
 function renderFinish(){stopClock();
   el("score").textContent=String(currentState.score??0);
   el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
@@ -426,18 +438,26 @@ function renderFinish(){stopClock();
       const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
       track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
     });
-  } else if(currentState.statsReady) {
+  } else if(currentState.subscriptionStatus==="member" && !currentState.statsReady) {
+    pendingBox.hidden=false;
+    pendingBox.textContent="Подписка на вы́Читать подтверждена. Общие итоги будут доступны "+
+      statisticsWhen()+". Открой приложение после 19:00, чтобы их увидеть.";
+  } else {
+    // Предлагаем подписаться СРАЗУ после теста, даже если сейчас 10:00.
     gate.hidden=false;
+    const description=el("subscription-description");
+    description.textContent=currentState.statsReady
+      ?"Итоги уже доступны! Подпишись на вы́Читать и проверь подписку, чтобы увидеть, как ответили остальные."
+      :"Подпишись на вы́Читать сейчас, чтобы увидеть статистику "+
+        statisticsWhen()+". Подписку можно подтвердить сразу после прохождения теста.";
     if(currentState.subscriptionStatus==="unavailable"){
-      message.textContent="Telegram временно не смог подтвердить подписку. Попробуй проверить ещё раз.";
+      message.textContent="Не удалось проверить подписку через Telegram. Попробуй ещё раз.";
       message.classList.add("status-error");
     } else {
-      message.textContent="Подписан на вы́Читать? Нажми проверку — и статистика откроется.";
+      message.textContent=currentState.statsReady
+        ?"После подписки нажми «Я подписался — проверить подписку»."
+        :"Подпишись сейчас и нажми «Я подписался — проверить подписку». Итоги появятся после 19:00.";
     }
-  } else {
-    pendingBox.hidden=false;
-    pendingBox.textContent="Общая статистика откроется после "+currentState.statisticsAt+
-      " (МСК) для подписчиков вы́Читать. Вернись в приложение после 19:00.";
   }
   show("finish-screen");
 }
@@ -447,7 +467,7 @@ function openTelegram(url){
 }
 async function checkSubscription(){
   const button=el("check-subscription-btn");
-  if(requestBusy||!currentState?.complete||!currentState?.statsReady)return;
+  if(requestBusy||!currentState?.complete)return;
   requestBusy=true;
   button.disabled=true;
   const status=el("subscription-status");
@@ -457,7 +477,7 @@ async function checkSubscription(){
     const next=await call("checkSubscription");
     currentState=next;
     renderFinish();
-    if(!Array.isArray(next.statistics) && next.subscriptionStatus==="required"){
+    if(next.subscriptionStatus==="required"){
       status.textContent="Подписка пока не найдена. Подпишись и попробуй снова.";
       status.classList.add("status-error");
     }
