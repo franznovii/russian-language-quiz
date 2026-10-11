@@ -161,7 +161,7 @@ function miniReadQuestions_() {
         !String(r[2]).trim() || options.length < 2 || options.some(x => !x.trim()) ||
         !correct.length || new Set(correct).size !== correct.length ||
         correct.some(n => !Number.isInteger(n) || n < 1 || n > options.length) ||
-        ![60, 90, 120].includes(timeSeconds)) {
+        !Number.isInteger(timeSeconds) || timeSeconds < 15 || timeSeconds > 300) {
       throw new Error("Проверь исходные вопросы, № " + r[0]);
     }
     return {
@@ -442,7 +442,7 @@ function sendTimedPilotButton() {
   const appUrl = MINI.pagesUrl + "?gas=" + encodeURIComponent(gasUrl);
   const payload = {
     chat_id: chatId,
-    text: "Мини-тест «вы́Читать»: новый выпуск с таймером 60/90/120 секунд.",
+    text: "Мини-тест «вы́Читать»: новый выпуск с таймером на каждый вопрос.",
     reply_markup: {inline_keyboard: [[{
       text: "Пройти тест с таймером",
       web_app: {url: appUrl}
