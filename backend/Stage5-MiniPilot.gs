@@ -175,6 +175,10 @@ function miniApi(action, initData, payload) {
     const token = miniProps_().getProperty("BOT_TOKEN");
     if (!token) throw new Error("Не указан BOT_TOKEN");
     const person = verifyTelegramInitData_(initData, token, Math.floor(Date.now() / 1000));
+    // ПИЛОТ: разрешён только TEST_CHAT_ID. Перед массовым запуском заменим это правило.
+    if (String(person.id) !== String(miniProps_().getProperty("TEST_CHAT_ID"))) {
+      return {ok: false, error: "Пилот доступен только администратору."};
+    }
     if (action === "state") return miniStateFor_(person);
     if (action === "answer") return miniAnswerFor_(person, payload);
     return {ok: false, error: "Неизвестная операция"};
