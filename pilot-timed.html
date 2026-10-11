@@ -52,6 +52,15 @@
     .stats-good {background:var(--green)}
     .stats-bad {background:var(--accent)}
     .stat-caption {font-size:12px;line-height:1.5;color:var(--muted)}
+    .subscription-panel{background:#f5e8dd;border:1px solid var(--line);padding:22px 19px;margin-top:19px}
+    .subscription-panel h3{font-family:Georgia,serif;font-size:25px;line-height:1.15;margin:0 0 10px}
+    .subscription-panel p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 15px}
+    .subscription-panel .primary-btn{width:100%}
+    .secondary-mini-btn{display:block;width:100%;border:1px solid var(--accent);background:transparent;color:var(--ink);padding:13px;margin-top:10px;font-size:14px;font-weight:700;cursor:pointer}
+    .secondary-mini-btn:disabled{opacity:.6;cursor:wait}
+    .share-mini-btn{display:block;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%;padding:16px;font-weight:700;cursor:pointer;margin:20px 0}
+    .subscription-message{min-height:20px;font-size:13px;line-height:1.5;color:var(--muted);margin:10px 0 0}
+    .subscription-message.status-error{color:#a12d21}
     h1 {font-size:clamp(45px,10vw,66px)}
     h2 {font-size:clamp(33px,8vw,48px);margin:18px 0}
   </style>
@@ -106,6 +115,14 @@
         <div id="stats" class="stats"></div>
       </div>
       <div id="stats-pending" class="notice" hidden></div>
+      <div id="stats-gate" class="subscription-panel" hidden>
+        <h3>А остальные справились лучше?</h3>
+        <p>Узнай, какие вопросы оказались самыми сложными. Общая статистика доступна подписчикам канала вы́Читать после 19:00 МСК.</p>
+        <button id="subscribe-btn" class="primary-btn" type="button">Подписаться на вы́Читать <span aria-hidden="true">↗</span></button>
+        <button id="check-subscription-btn" class="secondary-mini-btn" type="button">Я подписался — проверить подписку</button>
+        <p id="subscription-status" class="subscription-message" role="status" aria-live="polite"></p>
+      </div>
+      <button id="share-result-btn" class="share-mini-btn" type="button">Поделиться результатом ↗</button>
       <div class="notice">Твои ответы сохранены. Повторно пройти этот же выпуск нельзя.</div>
     </section>
   </main>
@@ -385,9 +402,18 @@ function renderFinish(){stopClock();
   el("score").textContent=String(currentState.score??0);
   el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
   const stats=el("stats"),section=el("stats-section"),pendingBox=el("stats-pending");
+  const gate=el("stats-gate");
+  const message=el("subscription-status");
+  const recheck=el("check-subscription-btn");
+  message.textContent="";
+  message.classList.remove("status-error");
+  recheck.disabled=false;
   stats.replaceChildren();
+  section.hidden=true;
+  gate.hidden=true;
+  pendingBox.hidden=true;
   if(Array.isArray(currentState.statistics)){
-    section.hidden=false;pendingBox.hidden=true;
+    section.hidden=false;
     currentState.statistics.forEach(item=>{
       const outer=document.createElement("div");
       const head=document.createElement("div");head.className="stats-head";
@@ -400,12 +426,61 @@ function renderFinish(){stopClock();
       const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
       track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
     });
+  } else if(currentState.statsReady) {
+    gate.hidden=false;
+    if(currentState.subscriptionStatus==="unavailable"){
+      message.textContent="Telegram временно не смог подтвердить подписку. Попробуй проверить ещё раз.";
+      message.classList.add("status-error");
+    } else {
+      message.textContent="Подписан на вы́Читать? Нажми проверку — и статистика откроется.";
+    }
   } else {
-    section.hidden=true;pendingBox.hidden=false;
-    pendingBox.textContent="Общая статистика появится после "+currentState.statisticsAt+" (МСК).";
+    pendingBox.hidden=false;
+    pendingBox.textContent="Общая статистика откроется после "+currentState.statisticsAt+
+      " (МСК) для подписчиков вы́Читать. Вернись в приложение после 19:00.";
   }
   show("finish-screen");
 }
+function openTelegram(url){
+  if(telegram?.openTelegramLink) telegram.openTelegramLink(url);
+  else window.open(url,"_blank","noopener,noreferrer");
+}
+async function checkSubscription(){
+  const button=el("check-subscription-btn");
+  if(requestBusy||!currentState?.complete||!currentState?.statsReady)return;
+  requestBusy=true;
+  button.disabled=true;
+  const status=el("subscription-status");
+  status.classList.remove("status-error");
+  status.textContent="Проверяем подписку через Telegram…";
+  try {
+    const next=await call("checkSubscription");
+    currentState=next;
+    renderFinish();
+    if(!Array.isArray(next.statistics) && next.subscriptionStatus==="required"){
+      status.textContent="Подписка пока не найдена. Подпишись и попробуй снова.";
+      status.classList.add("status-error");
+    }
+  } catch(e) {
+    status.textContent="Не удалось проверить подписку. Попробуй ещё раз.";
+    status.classList.add("status-error");
+  } finally {
+    requestBusy=false;
+    button.disabled=false;
+  }
+}
+function shareResult(){
+  if(!currentState?.complete)return;
+  const score=Number(currentState.score)||0;
+  const message="Я набрал "+score+" из 6 в тесте вы́Читать по русскому языку. А ты справишься лучше? Открой бота и выбери «Пройти тест» в меню.";
+  const share="https://t.me/share/url?url="+
+    encodeURIComponent("https://t.me/posttsop_test_bot")+
+    "&text="+encodeURIComponent(message);
+  openTelegram(share);
+}
+el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
+el("check-subscription-btn").addEventListener("click",checkSubscription);
+el("share-result-btn").addEventListener("click",shareResult);
 el("connect-btn").addEventListener("click",initialize);
 el("begin-btn").addEventListener("click",beginQuestion);
 el("answer-btn").addEventListener("click",answer);
