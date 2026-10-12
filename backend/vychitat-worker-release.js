@@ -413,7 +413,7 @@ async function adminAction(env,body) {
       if(isPublic(env)&&!draftIsReady(active.questions))
         throw err('В активном выпуске ещё тестовые вопросы. Публичное меню запрещено.');
       const privateOnly=isPilot(env);
-      if(privateOnly&&!/^[1-9]\\d{4,19}$/.test(String(env.TEST_CHAT_ID||'')))
+      if(privateOnly&&!/^[1-9]\d{4,19}$/.test(String(env.TEST_CHAT_ID||'')))
         throw err('Для личного меню настрой TEST_CHAT_ID');
       const request={menu_button:{type:'web_app',text:'Открыть тест',web_app:{url:BASE_PAGE}}};
       if(privateOnly)request.chat_id=Number(env.TEST_CHAT_ID);
