@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,follow">
+  <meta name="theme-color" content="#eeeae3">
+  <title>Русский на практике — вы́Читать (новый дизайн)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .mini-screen[hidden] {display:none !important}
+    .mini-screen {padding-top:35px;animation:enter .2s ease-out}
+    .test-label {color:var(--accent);font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:800}
+    .setup-card {background:var(--card);border:1px solid var(--line);padding:18px;margin-top:23px}
+    .setup-card label {display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+    .setup-card input {width:100%;font-size:13px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:0;color:var(--ink)}
+    .setup-card p {color:var(--muted);font-size:12px;line-height:1.5;margin-bottom:0}
+    .notice {background:#fff8e8;border-left:3px solid var(--accent);padding:14px 16px;font-size:13px;line-height:1.5;margin:14px 0}
+    .loader {padding:12px 0;color:var(--muted);font-size:13px;min-height:20px}
+    .status-error {color:#a12d21}
+    .hero-accent {color:var(--accent);font-style:italic}
+    .resume {color:var(--muted);font-size:13px;line-height:1.5}
+    .description-text {background:#ebe4d9;padding:18px 19px;border-left:3px solid var(--accent);white-space:pre-wrap;line-height:1.6;font-size:14px;margin:15px 0 25px}
+    .quiz-head {display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--muted);position:sticky;top:0;z-index:3;background:var(--paper);padding:10px 0}
+    .time-chip{font-variant-numeric:tabular-nums;font-size:18px;font-weight:800;color:var(--ink);border:1px solid var(--line);padding:7px 10px;min-width:70px;text-align:center}
+    .time-chip.urgent{color:#b52e21;background:#ffe6e0;border-color:#cf4d36}
+    .timer-track{height:4px;background:var(--line);overflow:hidden;margin:-21px 0 26px}
+    .timer-track>div{height:100%;width:100%;background:var(--green);transition:width .2s linear}
+    .timer-track.urgent>div{background:#ce3e28}
+    .mini-screen:focus{outline:none}
+    .quiz-progress {width:100%;height:5px;background:var(--line);margin:15px 0 29px;overflow:hidden}
+    .quiz-progress > div {height:100%;background:var(--accent);transition:width .25s ease}
+    .question-options {display:grid;gap:10px;margin:18px 0}
+    .question-choice {border:1px solid var(--line);background:var(--card);min-height:60px;width:100%;padding:12px 15px;display:flex;align-items:center;gap:15px;text-align:left;cursor:pointer;color:var(--ink);font-size:15px;line-height:1.4}
+    .question-choice:disabled {opacity:1;cursor:default}
+    .question-choice.selected {background:#f7e4dc;border-color:var(--accent)}
+    .question-choice.right {background:#e8f0e6;border-color:var(--green)}
+    .question-choice.wrong {background:#f9e5e2;border-color:#ae5445}
+    .marker {width:30px;height:30px;min-width:30px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800}
+    .selected .marker {background:var(--accent);border-color:var(--accent);color:#fff}
+    .right .marker {background:var(--green);border-color:var(--green);color:#fff}
+    .explanation {border-left:3px solid var(--green);background:#e8f0e6;padding:16px 19px;margin:15px 0;font-size:14px;line-height:1.55}
+    .explanation.wrong {border-color:var(--accent);background:#f9e5e2}
+    .explanation strong {display:block;margin-bottom:4px}
+    .explanation p {margin:0}
+    .big-result {font-family:Georgia,serif;font-size:110px;letter-spacing:-.075em;line-height:1;color:var(--accent);margin:10px 0}
+    .big-result small {font-size:27px;letter-spacing:0}
+    .stats {display:grid;gap:18px;margin:23px 0}
+    .stats-head {display:flex;justify-content:space-between;font-size:13px;gap:10px;margin-bottom:8px}
+    .stats-track {height:10px;display:flex;gap:2px;overflow:hidden;background:var(--line);border-radius:10px}
+    .stats-good {background:var(--green)}
+    .stats-bad {background:var(--accent)}
+    .stat-caption {font-size:12px;line-height:1.5;color:var(--muted)}
+    .subscription-panel{background:#f5e8dd;border:1px solid var(--line);padding:22px 19px;margin-top:19px}
+    .subscription-panel h3{font-family:Georgia,serif;font-size:25px;line-height:1.15;margin:0 0 10px}
+    .subscription-panel p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 15px}
+    .subscription-panel .primary-btn{width:100%}
+    .secondary-mini-btn{display:block;width:100%;border:1px solid var(--accent);background:transparent;color:var(--ink);padding:13px;margin-top:10px;font-size:14px;font-weight:700;cursor:pointer}
+    .secondary-mini-btn:disabled{opacity:.6;cursor:wait}
+    .share-mini-btn{display:block;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%;padding:16px;font-weight:700;cursor:pointer;margin:20px 0}
+    .subscription-message{min-height:20px;font-size:13px;line-height:1.5;color:var(--muted);margin:10px 0 0}
+    .subscription-message.status-error{color:#a12d21}
+    h1 {font-size:clamp(45px,10vw,66px)}
+    h2 {font-size:clamp(33px,8vw,48px);margin:18px 0}
+  
+
+/* wyChitat / folk-poster theme — presentation-only, Cloudflare logic unchanged */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+:root{--paper:#eeeae3;--ink:#1b1b1c;--muted:#575650;--line:#a5a19a;--accent:#c02621;--accent-dark:#aa1e1a;--green:#303231;--card:#f6f4ef;--shadow:none}
+html{background:#eeeae3;scroll-padding-top:105px}
+body{background:var(--paper);color:var(--ink);font-family:Arial,"Helvetica Neue",sans-serif;overflow-x:hidden;min-width:280px}
+.page{max-width:500px;width:100%;position:relative;isolation:isolate;min-height:100svh;padding:0 30px max(26px,env(safe-area-inset-bottom));background:radial-gradient(ellipse at 35% 10%,#fff8,transparent 60%),repeating-linear-gradient(114deg,#34343406 0 1px,transparent 1px 7px),var(--paper)}
+.page:before{content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;background-image:radial-gradient(#38312e12 .5px,transparent .65px);background-size:7px 11px}
+.scene-art{position:absolute;z-index:-1;pointer-events:none;top:0;left:0;width:100%;height:min(960px,100svh);opacity:.9}
+.site-header{position:relative;padding:27px 0 22px;z-index:2;border:0;display:flex;align-items:center;justify-content:flex-start}
+.site-header .logo-img{display:block;width:min(245px,74vw);height:auto;object-fit:contain}
+.wordmark{display:none}.header-tag{display:none}
+.page:has(#question-screen:not([hidden])) .scene-art{opacity:.14}
+.page:has(#finish-screen:not([hidden])) .scene-art{opacity:.23}
+.page:has(#intro-screen:not([hidden])) .scene-art{opacity:.58}
+.page:has(#connect-screen:not([hidden])) .scene-art{opacity:.88}
+main{position:relative;z-index:1}
+.mini-screen{padding-top:26px;animation:enter 220ms ease-out}
+#connect-screen,#intro-screen{min-height:calc(100svh - 200px);display:flex;flex-direction:column}
+#connect-screen[hidden],#intro-screen[hidden]{display:none!important}
+#connect-screen .lead,#intro-screen .lead{font:clamp(19px,5.3vw,23px)/1.33 Georgia,"Times New Roman",serif;max-width:310px;text-wrap:pretty}
+.eyebrow,.test-label{font-family:"Oswald","Arial Narrow",Impact,Arial,sans-serif;color:var(--accent);font-size:13px!important;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+.eyebrow-line{width:45px;height:2px}
+h1,h2{font-family:"Oswald","Arial Narrow",Impact,"Arial Black",Arial,sans-serif;font-stretch:condensed;font-weight:700;font-style:normal;text-transform:uppercase;letter-spacing:-.025em}
+h1{font-size:clamp(57px,14.5vw,80px);line-height:1.06;margin:23px 0 27px;overflow-wrap:break-word}
+h1 .hero-accent{color:var(--ink);font-style:normal}
+h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:19px 0 21px;overflow-wrap:anywhere}
+#connect-screen .lead{max-width:290px}
+#connect-screen>.resume{font:13px/1.44 Georgia,serif;max-width:280px;margin-top:12px;color:#34332f}
+#connect-screen .primary-btn{margin-top:auto}
+#intro-screen .intro-visual{background:transparent;min-height:75px;height:auto;overflow:visible;margin:20px 0 10px;border:0;border-top:2px solid var(--accent)}
+#intro-screen .big-letter{font-family:"Oswald",Impact,sans-serif;font-size:106px;top:-17px;left:0;color:var(--accent);transform:none}
+#intro-screen .visual-note{right:10px;top:18px;color:var(--ink);font:italic 20px Georgia,serif}
+#intro-screen .visual-star{right:0;bottom:-12px;color:var(--red);font-size:45px}
+#intro-screen .intro-facts{flex-wrap:wrap;color:var(--ink);font-weight:700;border-top:1px solid var(--ink)}
+.resume{color:#45433e}
+#intro-screen .primary-btn{margin-top:auto}
+.primary-btn,.share-mini-btn,.secondary-mini-btn{min-height:59px;border-radius:0!important;transition:background .18s ease,transform .12s ease;user-select:none;box-shadow:none}
+.primary-btn{font-family:"Oswald","Arial Narrow",Impact,Arial,sans-serif;font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.055em;padding:14px 19px;border:2px solid var(--ink);background:var(--ink);color:#fff}
+.primary-btn:hover:not(:disabled){background:var(--accent);border-color:var(--accent)}
+.primary-btn span{font-family:Arial,sans-serif;font-weight:400;font-size:23px}
+.primary-btn:disabled{opacity:.52}
+#connect-screen .primary-btn{background:var(--ink)}
+.notice,.description-text,.explanation,.subscription-panel{border-radius:0;box-shadow:none}
+.notice{background:#f7f1e4ec;border-left:4px solid var(--accent);padding:15px 17px;font-family:Georgia,serif;line-height:1.5;font-size:14px}
+.loader{min-height:19px;font-size:13px}
+.loader:not(:empty):before{content:"";display:inline-block;height:11px;width:11px;border:2px solid #bbb;border-top-color:var(--accent);border-radius:50%;animation:spinner .8s linear infinite;margin-right:8px}
+@keyframes spinner{to{transform:rotate(360deg)}}
+#question-screen{display:flex;flex-direction:column;min-height:calc(100svh - 155px);gap:0;padding-top:4px}
+#question-screen[hidden]{display:none!important}
+#question-screen .quiz-head{order:1;position:sticky;top:0;z-index:20;padding:10px 0 7px;min-height:48px;background:#eeeae3f5;backdrop-filter:blur(7px);font-family:"Oswald",Impact,Arial,sans-serif;color:var(--ink);font-size:16px;letter-spacing:.045em;text-transform:uppercase}
+.time-chip{background:transparent;border:0;font-family:"Oswald",Impact,Arial,sans-serif;font-size:25px;font-weight:700;color:var(--ink);padding:1px 0;text-align:right;min-width:75px}
+.time-chip.urgent{color:var(--accent);background:transparent;border:0}
+#question-screen .test-label{order:2;margin:9px 0 2px}
+#question-screen .quiz-progress{order:3;display:none}
+#question-screen .timer-track{order:4;height:8px;background:#c8c4bd;margin:5px 0 19px;overflow:hidden}
+.timer-track>div{background:var(--accent);transition:width .2s linear}
+.timer-track.urgent>div{background:#a91111}
+#question-screen .description-text{order:5;white-space:pre-wrap;line-height:1.48;font-family:Georgia,"Times New Roman",serif;font-size:clamp(16px,4.1vw,19px);padding:16px 16px;margin:10px 0 18px;border-left:4px solid var(--accent);background:#f7f5efe8;overflow-wrap:anywhere}
+#question-screen #question-text{order:6;font-size:clamp(31px,8.5vw,46px);line-height:1.06;margin:10px 0 21px;word-break:normal;overflow-wrap:anywhere}
+#question-screen:has(.description-text:not([hidden])) #question-text{margin-top:0}
+#question-screen .question-options{order:7;display:grid;gap:9px;margin:0 0 15px}
+.question-choice{background:#f8f7f2ed;border:1px solid #73716d;min-height:57px;padding:11px 13px;gap:11px;font-family:Arial,"Helvetica Neue",sans-serif;font-size:clamp(15px,4.2vw,18px);line-height:1.42;overflow-wrap:anywhere}
+.question-choice.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.marker{width:27px;min-width:27px;height:27px;border:2px solid #676661;border-radius:50%;font-size:11px;background:transparent}
+.selected .marker{background:#fff;border-color:#fff;color:var(--accent)}
+.question-choice.right{background:#dbdcd5;border-color:#272827;color:#202021}
+.right .marker{background:#292929;color:#fff;border-color:#292929}
+.question-choice.wrong{background:#e8c4bc;border-color:var(--accent)}
+.wrong .marker{background:var(--accent);color:#fff;border-color:var(--accent)}
+#question-screen .explanation{order:8;border-left:4px solid #242424;background:#e0e0d7ec;padding:18px 18px;margin:12px 0 18px;font:16px/1.55 Georgia,serif}
+.explanation strong{font-family:"Oswald",Impact,Arial,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.015em;font-size:42px;line-height:1.08;color:var(--accent);margin-bottom:14px}
+.explanation.wrong{border-left-color:var(--accent);background:#ece3dd}
+#question-screen #answer-btn{order:9;position:sticky;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:18;box-shadow:0 0 18px 9px var(--paper);margin-top:auto}
+#question-screen #question-status{order:10;background:var(--paper)}
+#finish-screen{min-height:calc(100svh - 155px)}
+#finish-screen h1{font-size:clamp(48px,12.5vw,68px);margin-bottom:9px}
+#finish-screen .hero-accent{color:var(--accent)}
+.big-result{font-family:"Oswald","Arial Narrow",Impact,sans-serif;font-weight:700;line-height:1;letter-spacing:-.045em;font-size:clamp(99px,28vw,145px);margin:15px 0 13px}
+.big-result small{font-size:clamp(27px,8vw,39px);letter-spacing:0;color:var(--ink);font-weight:500}
+#result-joke{font:clamp(18px,5vw,23px)/1.35 Georgia,serif;max-width:390px}
+#stats-section{margin-top:20px;border-top:2px solid var(--accent);padding-top:20px}
+#stats-section .eyebrow{color:var(--ink);font-size:27px!important;letter-spacing:0;line-height:1.15}
+.stat-caption{color:#4d4947;font:14px/1.45 Georgia,serif;margin:14px 0 21px}
+.stats{gap:20px;margin:24px 0}
+.stats-head{font-size:14px;font-weight:700;margin-bottom:10px}
+.stats-head strong{font-family:"Oswald",Impact,Arial,sans-serif;font-size:17px}
+.stats-track{height:13px;border-radius:0;gap:0;background:#afaba5}
+.stats-good{background:var(--accent)}
+.stats-bad{background:#b0ada7}
+.subscription-panel{background:#efede7dd;border:1px solid #bab6b0;border-left:4px solid var(--accent);padding:20px 18px}
+.subscription-panel h3{font-family:"Oswald",Impact,Arial,sans-serif;font-size:30px;line-height:1.12;text-transform:uppercase;letter-spacing:.015em}
+.subscription-panel p{font-family:Georgia,serif}
+.share-mini-btn{font-family:"Oswald",Impact,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;background:#252525;color:#fff;border-color:#252525}
+.secondary-mini-btn{font-family:"Oswald",Impact,Arial,sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:.025em;border-color:#444}
+.site-footer{font-size:11px;border-top:1px solid #a5a19a;padding:17px 0 12px;margin-top:38px;z-index:2;position:relative}
+@media(min-width:620px){body{background:#313131}.page{box-shadow:0 0 40px #0004}.scene-art{height:900px}#question-screen #answer-btn{bottom:12px}}
+@media(max-width:365px){.page{padding-left:20px;padding-right:20px}.site-header .logo-img{width:200px}#question-screen .description-text{font-size:16px}.question-choice{min-height:54px;padding:10px}.big-result{font-size:90px}}
+@media(max-height:670px){.site-header{padding-top:17px;padding-bottom:10px}#question-screen #question-text{font-size:32px}#question-screen .description-text{padding:12px 13px}.primary-btn{min-height:55px}}
+@media(prefers-reduced-motion:reduce){.loader:not(:empty):before{animation:none}}
+
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="site-header"><img class="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="вы́Читать"></header>
+<svg class="scene-art" viewBox="0 0 450 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<defs>
+ <pattern id="grain-v" patternUnits="userSpaceOnUse" width="27" height="39"><path d="M1 4l3 1m12 16h1m7 8h2m-13 3h3" stroke="#645f56" stroke-width=".6" opacity=".32"/></pattern>
+ <g id="pine-v" fill="#272827"><path d="M0 0l-13 32 6-2-18 27 7-2-20 36h76L19 55l7 2L7 30l6 2Z"/><rect x="-3" y="81" width="6" height="24"/></g>
+ <g id="birch-v"><path d="M0 0h13v900H0z" fill="#f9f8f3" stroke="#363638" stroke-width="2"/><path d="M1 33l11-4M1 108l10 6M0 147l13-5M0 258l12 4M0 311l13-8M0 390l12 5M0 475l11-5M0 519l14 5M0 640l12-9M0 714l12 4M0 811l12-6" stroke="#101112" stroke-width="6"/></g>
+ <g id="bird-v" fill="#131415"><path d="M-52 10C-24-3-18-17 0-9c14-9 22-3 44-15L23-3l47 18-52 2-14 13-9-18-19 9Z"/></g>
+</defs>
+<circle cx="354" cy="180" r="112" fill="#ba211c" opacity=".96"/>
+<g transform="translate(343 158) rotate(8) scale(1.18)"><use href="#bird-v"/></g>
+<g fill="#ba211c"><path d="M0 122q32-21 46-44l-4 35 32-29-12 29 23-8q-21 32-61 31Z"/><path d="M5 222q25 9 47 2l-26 19 26 6-36 6Z"/><path d="M438 322q-20-15-45-16l22 21-24-1 21 20Z"/></g>
+<!-- A continuous walled architectural foundation anchors the towers -->
+<g opacity=".94" fill="#343536">
+<path d="M160 747h290v153H160Z"/>
+<path d="M154 744l13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13 13-13 13 13V774H154Z"/>
+<path d="M287 741V593h57v148Z"/><path d="M278 594l38-95 38 95Z"/><path d="M309 511l8-37 8 37Z"/><path d="M313 472l4-14 4 14Z"/><circle cx="315" cy="630" r="15" fill="#f0ede5"/><circle cx="315" cy="630" r="11" fill="#343536"/><path d="M315 620v10l6 3" stroke="#f0ede5" fill="none" stroke-width="2"/>
+<path d="M217 744v-69h33v69Z"/><path d="M210 676l24-65 24 65Z"/>
+<path d="M361 744V667h37v77Z"/><path d="M355 668l24-57 25 57Z"/>
+<path d="M183 747v-37h23v37Z"/><path d="M180 711l15-37 15 37Z"/>
+</g>
+<g opacity=".9"><use href="#pine-v" transform="translate(41 762) scale(1.4)"/><use href="#pine-v" transform="translate(83 793) scale(.9)"/><use href="#pine-v" transform="translate(132 782) scale(1.05)"/><use href="#pine-v" transform="translate(418 781) scale(.9)"/></g>
+<path d="M0 842q66-21 134 0t155 2 161-18v74H0Z" fill="#c4c0b8"/>
+<path d="M0 862q80-17 155 8t150-2 146-10" fill="none" stroke="#fff9" stroke-width="8"/>
+<g opacity=".97"><use href="#birch-v" transform="translate(13 -20) rotate(1)"/><use href="#birch-v" transform="translate(435 -20) rotate(-2)"/></g>
+<g stroke="#a92420" stroke-width="4" fill="none"><path d="M24 144q38 50 4 102m395-43q-40 60-15 99"/><path d="m24 162 22 5m-17 19-19 12m406 41-18 10m12 23 20 7"/></g>
+<path d="M0 900L124 900 0 752Z" fill="#b32320"/><path d="M0 875l59 25M0 813l93 87m-66-79 20 40M50 851l14 30" stroke="#f6e6d5" stroke-width="8" fill="none"/>
+<rect width="450" height="900" fill="url(#grain-v)" opacity=".65"/>
+</svg>
+
+  <main>
+    <section class="mini-screen" id="connect-screen">
+      <div class="eyebrow"><span class="eyebrow-line"></span> Мини-тест по русскому языку</div>
+      <h1>Русский<br><span class="hero-accent">на практике.</span></h1>
+      <p class="lead">Шесть вопросов доступны сразу. На каждый вопрос — своё время, на весь выпуск — одна попытка. В конце узнаешь свой результат.</p>
+      <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
+      <p class="resume">На вопрос по умолчанию даётся 60 секунд. Время может отличаться для разных заданий. Таймер не останавливается при закрытии приложения.</p>
+      <button class="primary-btn" id="connect-btn" type="button">Открыть тест <span aria-hidden="true">→</span></button>
+      <div class="loader" id="connect-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="intro-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
+      <h1>Проверим<br><span class="hero-accent">грамотность?</span></h1>
+      <p class="lead" id="intro-greeting"></p>
+      <div class="intro-visual" aria-hidden="true">
+        <div class="big-letter">Я</div><span class="visual-note">Тут надо<br>подумать.</span><span class="visual-star">✳</span>
+      </div>
+      <div class="intro-facts"><span>06 вопросов</span><span>Таймер на вопрос</span><span>Одна попытка</span></div>
+      <p class="resume" id="resume-text"></p>
+      <button class="primary-btn" id="begin-btn" type="button">Начать <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="mini-screen" id="question-screen" hidden>
+      <div class="quiz-head"><span id="question-count">Вопрос 1/6</span><span id="timer-chip" class="time-chip" role="timer" aria-label="Осталось времени">01:00</span></div>
+      <div class="test-label" id="question-type">ОДИН ОТВЕТ</div>
+      <div class="quiz-progress"><div id="progress"></div></div>
+      <div class="timer-track" id="timer-track"><div id="timer-fill"></div></div>
+      <h2 id="question-text"></h2>
+      <div id="description" class="description-text" hidden></div>
+      <div id="options" class="question-options" role="group" aria-label="Выбери ответ"></div>
+      <div class="explanation" id="explanation" hidden></div>
+      <button class="primary-btn" id="answer-btn" type="button" disabled>Проверить ответ <span aria-hidden="true">→</span></button>
+      <div class="loader" id="question-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="finish-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Всё вы́читано</div>
+      <h1>Вот и<br><span class="hero-accent">результат.</span></h1>
+      <div class="big-result"><span id="score">0</span> <small>из 6</small></div>
+      <p class="lead" id="result-joke"></p>
+      <div id="stats-section" hidden>
+        <div class="eyebrow">Как справились остальные?</div>
+        <p class="stat-caption">Статистика на момент открытия. Только проценты, без количества участников.</p>
+        <div id="stats" class="stats"></div>
+      </div>
+      <div id="stats-pending" class="notice" hidden></div>
+      <div id="stats-gate" class="subscription-panel" hidden>
+        <h3>А остальные справились лучше?</h3>
+        <p id="subscription-description">Узнай, какие вопросы оказались самыми сложными. Подпишись на вы́Читать, чтобы увидеть общую статистику после 19:00 МСК.</p>
+        <button id="subscribe-btn" class="primary-btn" type="button">Подписаться на вы́Читать <span aria-hidden="true">↗</span></button>
+        <button id="check-subscription-btn" class="secondary-mini-btn" type="button">Я подписался — проверить подписку</button>
+        <p id="subscription-status" class="subscription-message" role="status" aria-live="polite"></p>
+      </div>
+      <button id="share-result-btn" class="share-mini-btn" type="button">Поделиться результатом ↗</button>
+      <div class="notice">Твои ответы сохранены. Повторно пройти этот же выпуск нельзя.</div>
+    </section>
+  </main>
+  <footer class="site-footer"><span>вы́Читать © 2026</span><span>Тест по русскому языку</span></footer>
+</div>
+<script>
+"use strict";
+const telegram=window.Telegram?.WebApp || null;
+try { telegram?.ready(); telegram?.expand(); } catch (_) {}
+const el=id=>document.getElementById(id);
+const screens=["connect-screen","intro-screen","question-screen","finish-screen"];
+let currentState=null,currentIndex=0,selection=new Set(),showingFeedback=false;
+let clockId=null,clockPending=false,requestBusy=false;
+const jokes=[
+  "Ты последовательно отстаивал альтернативную орфографию.",
+  "Один правильный ответ. Остальные пока в авторской редакции.",
+  "Между тобой и русским языком есть искра. Пока в основном от трения.",
+  "Половина тебя — корректор. Вторая половина мешает ему работать.",
+  "Две ошибки оставлены специально, чтобы редактору было чем заняться.",
+  "Одна ошибка — это уже не безграмотность, а сюжетный поворот.",
+  "Всё правильно. Теперь можешь исправлять админа."
+];
+
+
+function stopClock(){if(clockId!==null){clearInterval(clockId);clockId=null}}
+function renderCountdown(){
+  if(showingFeedback || !currentState?.activeTimer) return;
+  const info=currentState.activeTimer;
+  const remaining=Math.max(0,Math.ceil((info.deadlineMs-Date.now())/1000));
+  const urgent=remaining<=10;
+  const mins=Math.floor(remaining/60);
+  const secs=remaining%60;
+  el("timer-chip").textContent=String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0");
+  el("timer-chip").classList.toggle("urgent",urgent);
+  el("timer-track").classList.toggle("urgent",urgent);
+  el("timer-fill").style.width=Math.max(0,Math.min(100,remaining*100/info.durationSec))+"%";
+  if(remaining===0 && !clockPending && !requestBusy){
+    clockPending=true;
+    expireQuestion();
+  }
+}
+async function expireQuestion(){
+  stopClock();
+  el("answer-btn").disabled=true;
+  el("question-status").textContent="Время истекло. Засчитываю вопрос…";
+  try{
+    requestBusy=true;
+    const oldIndex=currentIndex;
+    currentState=await call("expire");
+    requestBusy=false;
+    el("question-status").textContent="";
+    const previous=currentState.answers.find(a=>a.questionId===currentState.questions[oldIndex].id);
+    if(previous){currentIndex=oldIndex;showFeedback();}
+    else{
+      // Server may receive the request a fraction of a second before deadline.
+      clockPending=false;startClock();
+    }
+  }catch(e){
+    requestBusy=false;
+    clockPending=false;
+    logError("question-status","Не удалось подтвердить истечение времени. Нажми «Проверить время» ещё раз.");
+    el("answer-btn").firstChild.textContent="Проверить время ";
+    el("answer-btn").disabled=false;
+    showingFeedback=false;
+  }
+}
+function startClock(){
+  stopClock();
+  if(!currentState?.activeTimer)return;
+  clockId=setInterval(renderCountdown,250);
+  renderCountdown();
+}
+
+function show(screen){screens.forEach(s=>{el(s).hidden=s!==screen});window.scrollTo(0,0)}
+function logError(id,message){el(id).textContent=message;el(id).classList.add("status-error")}
+const CLOUDFLARE_API = "https://vychitat.fr-novii.workers.dev/api";
+async function call(action,payload){
+  if(!telegram?.initData) throw new Error("Открой тест внутри Telegram.");
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  try{
+    const response=await fetch(CLOUDFLARE_API,{
+      method:"POST",mode:"cors",credentials:"omit",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action,initData:telegram.initData,payload:payload||null}),
+      signal:controller.signal
+    });
+    const data=await response.json();
+    if(!response.ok||!data?.ok)throw new Error(String(data?.error||"Ошибка сервера"));
+    return data;
+  }catch(e){
+    if(e?.name==="AbortError")throw new Error("Сервер не ответил за 15 секунд.");
+    throw e;
+  }finally{clearTimeout(timeout)}
+}
+async function initialize(){
+  if(!telegram?.initData){
+    el("telegram-notice").hidden=false;
+    logError("connect-status","Открой страницу через кнопку Telegram-бота.");return;
+  }
+  el("connect-btn").disabled=true;
+  el("connect-status").classList.remove("status-error");
+  el("connect-status").textContent="Проверяю Telegram и загружаю вопросы…";
+  try{
+    currentState=await call("state");
+    showInitialState();
+  }catch(e){logError("connect-status",String(e.message||e))}
+  finally{el("connect-btn").disabled=false}
+}
+function showInitialState(){
+  if(currentState.complete){renderFinish();return}
+  const n=currentState.answers.length;
+  if(currentState.activeTimer){
+    currentIndex=n;
+    renderQuestion();
+    return;
+  }
+  el("intro-greeting").textContent="Привет, "+currentState.userName+"! Один или несколько верных вариантов — внимательно читай каждое задание.";
+  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить»." : "Отсчёт начнётся, когда откроешь первый вопрос.";
+  el("begin-btn").firstChild.textContent=n?"Продолжить тест ":"Начать тест ";
+  show("intro-screen");
+}
+async function beginQuestion(){
+  el("begin-btn").disabled=true;
+  try{
+    currentState=await call("open");
+    if(currentState.complete){renderFinish();return}
+    if(!currentState.activeTimer)throw new Error("Сервер не запустил таймер.");
+    renderQuestion();
+  }catch(e){
+    el("resume-text").textContent="Ошибка: "+String(e.message||e);
+  }finally{el("begin-btn").disabled=false}
+}
+function renderQuestion(){
+  showingFeedback=false;selection=new Set();clockPending=false;
+  currentIndex=currentState.answers.length;
+  const q=currentState.questions[currentIndex];
+  if(!q){
+    logError("resume-text","Следующий вопрос ещё не открыт. Нажми «Продолжить тест».");
+    show("intro-screen");return
+  }
+  el("question-count").textContent="Вопрос "+q.id+"/6";
+  el("question-type").textContent=q.multiple?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
+  el("progress").style.width=((currentIndex/6)*100)+"%";
+  el("question-text").textContent=q.text;
+  el("description").hidden=!q.description;
+  el("description").textContent=q.description || "";
+  el("explanation").hidden=true;
+  el("question-status").textContent="";
+  el("options").replaceChildren();
+  q.options.forEach((value,i)=>{
+    const button=document.createElement("button");
+    button.type="button";button.className="question-choice";button.setAttribute("aria-pressed","false");
+    const marker=document.createElement("span");marker.className="marker";marker.textContent=String.fromCharCode(65+i);marker.setAttribute("aria-hidden","true");
+    const text=document.createElement("span");text.textContent=value;
+    button.append(marker,text);
+    button.addEventListener("click",()=>choose(i,q.multiple));
+    el("options").appendChild(button);
+  });
+  el("answer-btn").disabled=true;
+  el("answer-btn").firstChild.textContent="Проверить ответ ";
+  show("question-screen");
+  startClock();
+}
+function choose(i,multiple){
+  if(showingFeedback)return;
+  if(!multiple)selection=new Set([i]);
+  else if(selection.has(i))selection.delete(i);
+  else selection.add(i);
+  Array.from(el("options").children).forEach((b,n)=>{
+    const yes=selection.has(n);
+    b.classList.toggle("selected",yes);b.setAttribute("aria-pressed",yes?"true":"false");
+  });
+  el("answer-btn").disabled=selection.size===0;
+}
+function showFeedback(){
+  const q=currentState.questions[currentIndex];
+  const answer=currentState.answers.find(a=>a.questionId===q.id);
+  if(!answer){renderQuestion();return}
+  showingFeedback=true;stopClock();
+  Array.from(el("options").children).forEach((b,i)=>{
+    b.disabled=true;
+    b.classList.toggle("selected",answer.selected.includes(i));
+    b.classList.toggle("right",answer.correctOptions.includes(i));
+    b.classList.toggle("wrong",answer.selected.includes(i)&&!answer.correctOptions.includes(i));
+  });
+  const box=el("explanation");box.replaceChildren();box.hidden=false;
+  box.classList.toggle("wrong",!answer.correct);
+  const title=document.createElement("strong");title.textContent=answer.timedOut?"Время вышло.":(answer.correct?"Правильно.":"Не совсем.");
+  const desc=document.createElement("p");desc.textContent=answer.explanation||"Ответ сохранён.";
+  box.append(title,desc);
+  el("answer-btn").firstChild.textContent=currentState.complete?"Посмотреть результат ":"Следующий вопрос ";
+  el("answer-btn").disabled=false;
+}
+async function answer(){
+  if(requestBusy)return;
+  if(showingFeedback){
+    if(currentState.complete){renderFinish();return}
+    el("answer-btn").disabled=true;
+    try{
+      currentState=await call("open");
+      if(currentState.complete)renderFinish();
+      else renderQuestion();
+    }catch(e){logError("question-status",String(e.message||e));el("answer-btn").disabled=false}
+    return;
+  }
+  if(!selection.size && Date.now()<currentState.activeTimer?.deadlineMs)return;
+  if(Date.now()>=currentState.activeTimer?.deadlineMs) {
+    if(!clockPending){clockPending=true;await expireQuestion();}
+    return;
+  }
+  requestBusy=true;
+  el("answer-btn").disabled=true;
+  el("question-status").textContent="Сохраняю ответ…";
+  try{
+    const q=currentState.questions[currentIndex];
+    currentState=await call("answer",{questionId:q.id,selected:Array.from(selection)});
+    el("question-status").textContent="";
+    showFeedback();
+  }catch(e){
+    logError("question-status",String(e.message||e));
+    el("answer-btn").disabled=false;
+  }finally{requestBusy=false}
+}
+function statisticsWhen(){
+  const timestamp=String(currentState?.statisticsAt||"");
+  let today="";
+  try{
+    today=new Intl.DateTimeFormat("ru-RU",{
+      day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Moscow"
+    }).format(new Date());
+  }catch(_){}
+  return timestamp.slice(0,10)===today
+    ?"сегодня после 19:00 МСК"
+    :"после "+timestamp+" (МСК)";
+}
+function renderFinish(){stopClock();
+  el("score").textContent=String(currentState.score??0);
+  el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
+  const stats=el("stats"),section=el("stats-section"),pendingBox=el("stats-pending");
+  const gate=el("stats-gate");
+  const message=el("subscription-status");
+  const recheck=el("check-subscription-btn");
+  message.textContent="";
+  message.classList.remove("status-error");
+  recheck.disabled=false;
+  stats.replaceChildren();
+  section.hidden=true;
+  gate.hidden=true;
+  pendingBox.hidden=true;
+  if(Array.isArray(currentState.statistics)){
+    section.hidden=false;
+    currentState.statistics.forEach(item=>{
+      const outer=document.createElement("div");
+      const head=document.createElement("div");head.className="stats-head";
+      const label=document.createElement("strong");label.textContent="Вопрос "+item.questionId;
+      const values=document.createElement("span");
+      values.textContent="Верно "+item.correctPercent+"% · Ошибки "+item.incorrectPercent+"%";
+      head.append(label,values);
+      const track=document.createElement("div");track.className="stats-track";
+      const good=document.createElement("div");good.className="stats-good";good.style.width=item.correctPercent+"%";
+      const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
+      track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
+    });
+  } else if(currentState.subscriptionStatus==="member" && !currentState.statsReady) {
+    pendingBox.hidden=false;
+    pendingBox.textContent="Подписка на вы́Читать подтверждена. Общие итоги будут доступны "+
+      statisticsWhen()+". Открой приложение после 19:00, чтобы их увидеть.";
+  } else {
+    // Предлагаем подписаться СРАЗУ после теста, даже если сейчас 10:00.
+    gate.hidden=false;
+    const description=el("subscription-description");
+    description.textContent=currentState.statsReady
+      ?"Итоги уже доступны! Подпишись на вы́Читать и проверь подписку, чтобы увидеть, как ответили остальные."
+      :"Подпишись на вы́Читать сейчас, чтобы увидеть статистику "+
+        statisticsWhen()+". Подписку можно подтвердить сразу после прохождения теста.";
+    if(currentState.subscriptionStatus==="unavailable"){
+      message.textContent="Не удалось проверить подписку через Telegram. Попробуй ещё раз.";
+      message.classList.add("status-error");
+    } else {
+      message.textContent=currentState.statsReady
+        ?"После подписки нажми «Я подписался — проверить подписку»."
+        :"Подпишись сейчас и нажми «Я подписался — проверить подписку». Итоги появятся после 19:00.";
+    }
+  }
+  show("finish-screen");
+}
+function openTelegram(url){
+  if(telegram?.openTelegramLink) telegram.openTelegramLink(url);
+  else window.open(url,"_blank","noopener,noreferrer");
+}
+async function checkSubscription(){
+  const button=el("check-subscription-btn");
+  if(requestBusy||!currentState?.complete)return;
+  requestBusy=true;
+  button.disabled=true;
+  const status=el("subscription-status");
+  status.classList.remove("status-error");
+  status.textContent="Проверяем подписку через Telegram…";
+  try {
+    const next=await call("checkSubscription");
+    currentState=next;
+    renderFinish();
+    if(next.subscriptionStatus==="required"){
+      status.textContent="Подписка пока не найдена. Подпишись и попробуй снова.";
+      status.classList.add("status-error");
+    }
+  } catch(e) {
+    status.textContent="Не удалось проверить подписку. Попробуй ещё раз.";
+    status.classList.add("status-error");
+  } finally {
+    requestBusy=false;
+    button.disabled=false;
+  }
+}
+async function shareResult(){
+  if(!currentState?.complete || requestBusy)return;
+  const button=el("share-result-btn");
+  const label=button.textContent;
+  requestBusy=true;
+  button.disabled=true;
+  button.textContent="Готовлю сообщение…";
+  try{
+    if(typeof telegram?.shareMessage==="function"){
+      const prepared=await call("share");
+      if(prepared?.shareId){
+        telegram.shareMessage(prepared.shareId);
+        return;
+      }
+    }
+    throw new Error("Нативное меню недоступно");
+  }catch(_){
+    // Старый Telegram: ссылки будут видны как URL — share/url не поддерживает
+    // встроенные ссылки, используем его только как резервный вариант.
+    const score=Number(currentState.score)||0;
+    const message="Я набрал "+score+" из 6 в тесте канала вы́Читать по русскому языку.\n"+
+      "Канал: https://t.me/posttsop\nА ты справишься лучше?";
+    const share="https://t.me/share/url?url="+
+      encodeURIComponent("https://t.me/posttsop_test_bot?start=quiz")+
+      "&text="+encodeURIComponent(message);
+    openTelegram(share);
+  }finally{
+    requestBusy=false;
+    button.disabled=false;
+    button.textContent=label;
+  }
+}
+el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
+el("check-subscription-btn").addEventListener("click",checkSubscription);
+el("share-result-btn").addEventListener("click",shareResult);
+el("connect-btn").addEventListener("click",initialize);
+el("begin-btn").addEventListener("click",beginQuestion);
+el("answer-btn").addEventListener("click",answer);
+if(!telegram?.initData)el("telegram-notice").hidden=false;
+</script>
+</body></html>
