@@ -180,6 +180,27 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 /* Timer ink is driven by the displayed value as a defense against stale screen state. */
 #timer-chip.time-chip.urgent,
 #timer-chip.time-chip.expired{color:#c02621!important}
+
+/* Экран 11: two translucent paper panels; original text layout stays untouched. */
+#connect-screen.is-loading > .lead,
+#connect-screen.is-loading > .resume{
+  position:relative;
+  isolation:isolate;
+  color:#181818;
+}
+#connect-screen.is-loading > .lead::before,
+#connect-screen.is-loading > .resume::before{
+  content:"";
+  position:absolute;
+  inset:-11px -14px;
+  z-index:-1;
+  background:rgba(249,247,241,.88);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  border:1px solid rgba(255,255,255,.45);
+  pointer-events:none;
+}
+
 </style>
 </head>
 <body>
@@ -370,13 +391,14 @@ async function initialize(){
     logError("connect-status","Открой страницу через кнопку Telegram-бота.");return;
   }
   el("connect-btn").disabled=true;
+  el("connect-screen").classList.add("is-loading");
   el("connect-status").classList.remove("status-error");
   el("connect-status").textContent="Проверяю Telegram и загружаю вопросы…";
   try{
     currentState=await call("state");
     showInitialState();
   }catch(e){logError("connect-status",String(e.message||e))}
-  finally{el("connect-btn").disabled=false}
+  finally{el("connect-btn").disabled=false;el("connect-screen").classList.remove("is-loading")}
 }
 function showInitialState(){
   if(currentState.complete){renderFinish();return}
