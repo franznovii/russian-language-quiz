@@ -343,7 +343,7 @@ async function adminAction(env,body) {
       const placeholders = run.questions.filter(q=>/бла\s+бла/i.test(String(q.description||'')+' '+String(q.text||'')));
       return {ok:true,runId:run.id,statisticsAt:statsAtLabel(run.statsAt),
         launchUrl:BASE_PAGE,botUsername:bot.username,
-        webhookUrl:hook.url||'',webhookLastError:hook.last_error_message||null,
+        webhookUrl:hook.url==='https://vychitat.fr-novii.workers.dev/telegram'?hook.url:(hook.url?'OTHER':''),webhookLastError:hook.last_error_message||null,
         accessMode:String(env.ACCESS_MODE||'pilot'),
         invitationsEnabled:env.INVITES_ENABLED==='yes',weeklyEnabled:env.WEEKLY_ENABLED==='yes',
         questionCount:run.questions.length,placeholderCount:placeholders.length};
