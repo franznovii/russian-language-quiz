@@ -19,7 +19,29 @@
   height:clamp(55px,9vh,74px);pointer-events:none;
   background:linear-gradient(to bottom,rgba(238,234,227,0),#eeeae3 50%,#eeeae3);
 }
-</style></head>
+</style><style>
+/* Только приветственный экран: утверждённые точечные правки. */
+#intro-screen .intro-title-red{color:var(--accent)}
+#intro-screen .intro-facts{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  max-width:85%;
+}
+#intro-screen .intro-facts span{
+  display:block;
+  background:none;
+  padding:0;
+}
+#intro-screen .resume{
+  background:none;
+  padding:0;
+  max-width:85%;
+  margin-top:10px;
+}
+</style>
+</head>
 <body>
 <div class="page" data-screen="connect-screen">
   <header class="site-header"><img class="logo-img" src="./assets/vychitat-logo.png" alt="вы́Читать" width="212" height="100"></header>
@@ -38,7 +60,7 @@
 
     <section class="mini-screen" id="intro-screen" hidden>
       <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
-      <h1 class="intro-title">Русский<br>на практике</h1>
+      <h1 class="intro-title"><span class="intro-title-red">Русский</span><br>на практике</h1>
       <p class="lead" id="intro-greeting"></p>
       <div class="intro-facts"><span>6 вопросов</span><span>Таймер на вопрос</span><span>Одна попытка</span></div>
       <p class="resume" id="resume-text"></p>
