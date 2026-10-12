@@ -165,16 +165,16 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
 }
 .page[data-screen="share-screen"] .share-card .big-result{
   position:absolute;
-  top:33%;
+  top:43.5%;
   left:0;
   width:56%;
-  height:26%;
+  height:22%;
   display:flex;
   align-items:center;
   gap:6px;
   margin:0;
   padding:0 0 0 3%;
-  background:radial-gradient(ellipse 83% 84% at 37% 52%,#eae6de 0%,#eae6de 68%,rgba(234,230,222,.94) 81%,rgba(234,230,222,0) 100%);
+  background:radial-gradient(ellipse 83% 96% at 37% 50%,#eae6de 0%,#eae6de 75%,rgba(234,230,222,.97) 85%,rgba(234,230,222,0) 100%);
   color:#b3211f;
   font-family:Oswald,'Arial Narrow',Impact,sans-serif;
   font-size:clamp(69px,22vw,107px);
