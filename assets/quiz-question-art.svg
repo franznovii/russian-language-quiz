@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 960" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+<defs>
+ <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".23" numOctaves="3" seed="13" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".10"/></feComponentTransfer></filter>
+ <pattern id="linen" patternUnits="userSpaceOnUse" width="12" height="12"><path d="M0 0H12M0 6H12" stroke="#aaa49a" stroke-width=".18" opacity=".32"/></pattern>
+ <pattern id="ornament" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M19 2 34 19 19 36 4 19Z M19 10 26 19 19 28 12 19Z" stroke="#d33529" fill="none" stroke-width="2"/><path d="M0 19h9 M29 19h9 M19 0v8 M19 30v8" stroke="#d33529" stroke-width="1.6"/></pattern>
+ <linearGradient id="shade" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#f0ede6"/><stop offset="1" stop-color="#dedbd5"/></linearGradient>
+ <linearGradient id="fade"><stop stop-color="#eceae4" stop-opacity="0"/><stop offset=".32" stop-color="#eceae4" stop-opacity=".7"/><stop offset=".7" stop-color="#eceae4" stop-opacity=".94"/></linearGradient>
+</defs>
+<rect width="480" height="960" fill="url(#shade)"/>
+<rect width="480" height="960" filter="url(#paper)" opacity=".68"/>
+<path d="M0 290 35 298 67 286 103 300 143 283 191 305 222 292 258 312 289 298 320 316 345 295 385 309 419 292 480 305V440H0Z" fill="#dad9d3" opacity=".67"/>
+<path d="M0 295 34 305 62 291 112 309 154 296 183 312 230 294 274 321 320 308 366 313 409 301 480 326" fill="none" stroke="#b9b8b1" stroke-width="1.4" opacity=".6"/>
+<g opacity=".45" fill="none" stroke="#b4b1a8" stroke-width=".8"><path d="M17 60c62 -12 100 -10 153 0M36 67c90 0 160 6 218 19M25 76c56 -3 87 4 122 9M33 89c80 12 135 7 200 16"/><path d="M3 365q90-13 148 0M0 373q130-4 198 15M9 380q115 0 180 16"/></g>
+<!-- Russian birch bark / graphic frame. Kept to the right so text stays legible. -->
+<g transform="translate(420 0)">
+ <path d="M-3 -12C-12 80 -7 155 -4 234C-1 332 6 444 -5 555C-6 672 -4 760 2 970H47C35 820 40 738 37 613C34 453 45 355 36 251C28 151 34 80 42 -12Z" fill="#d5d4ce" stroke="#282a2b" stroke-width="3"/>
+ <path d="M12 -10 10 208 16 480 10 640 15 960M27 -15 22 132 27 350 23 640 27 960" stroke="#969690" opacity=".6" fill="none" stroke-width="2"/>
+ <g fill="#1c1c1c" opacity=".91"><path d="M-4 47 17 53 7 59-7 65Z"/><path d="M38 86 13 93 24 100 38 104Z"/><path d="M-3 125 17 134 7 138-3 149Z"/><path d="M37 192 12 199 16 208 40 210Z"/><path d="M-5 246 19 252 9 263 -3 271Z"/><path d="M35 302 14 310 20 322 37 325Z"/><path d="M-4 361 23 369 9 381-5 381Z"/><path d="M40 427 10 429 20 445 40 455Z"/><path d="M-5 507 18 517 8 524-5 534Z"/><path d="M39 580 15 589 26 595 40 599Z"/><path d="M-5 665 17 673 9 685 -5 686Z"/><path d="M40 739 11 754 21 759 42 759Z"/><path d="M-4 826 23 833 9 846-4 848Z"/></g>
+ <g fill="none" stroke="#2e2b28" stroke-width="2.5"><path d="M2 211c-30 -42 -60 -59-104 -79"/><path d="M30 365c35 -44 65 -65 109 -75"/><path d="M4 540c-33 -29 -60 -36 -92 -41"/></g>
+ <g fill="#252525" opacity=".9"><path d="m-103 132 -16 -13 10 20Z"/><path d="m-84 147 -15 2 13 8Z"/><path d="m-50 171 -10 -15 -5 21Z"/><path d="m90 327 25 -18 -10 22Z"/><path d="m66 339 22 -8 -12 16Z"/></g>
+</g>
+<g transform="translate(469 0)" opacity=".45"><path d="M-4 -20 C-10 140 5 300 0 460S0 780 8 980" fill="none" stroke="#19191a" stroke-width="7"/><path d="M1 105c-24-15-39-20-54-23M2 423c-19-12-33-18-49-20" fill="none" stroke="#222" stroke-width="3"/></g>
+<!-- Red bird, lino-cut ornamental silhouette in flight. -->
+<g transform="translate(335 235) rotate(-9)" fill="#bd2523" stroke="#a72520" stroke-width="1">
+ <path d="M-5 13C-45 7-78-8-121-25C-105-26-96-24-84-22C-113-39-126-51-137-67C-107-49-88-43-73-42C-91-61-96-74-100-84C-66-55-43-35-16-30C3-26 14-12 11 0Z"/>
+ <path d="M3-16C19-42 35-74 40-122C50-96 47-72 38-54C54-81 62-107 66-130C70-97 63-66 48-43C67-54 78-67 83-78C78-44 52-14 29 7Z"/>
+ <path d="M-10 0c24-11 43-5 54 8l-12 16-21 7-16-8Z"/>
+ <path d="M24 24C48 43 72 69 84 94C62 83 34 59 12 32Z"/>
+ <path d="M32-1 55 0 39 7Z"/>
+ <circle cx="27" cy="4" r="2.3" fill="#f6efe5" stroke="none"/>
+ <g fill="none" stroke="#eb5b51" stroke-width="1.6" opacity=".72"><path d="M-33-15-106-39M-31-17-94-59M-25-21-64-48M28-25 53-93M38-15 74-68M-4 19 42 63"/></g>
+</g>
+<!-- Dark watercolor bank and ragged folk embroidered scrap at the bottom. -->
+<path d="M0 896Q48 873 81 885Q102 863 138 878Q180 864 219 881Q276 868 313 887Q372 870 415 882L480 861V960H0Z" fill="#343537" opacity=".7"/>
+<path d="M0 901Q64 883 123 890Q191 881 245 895Q317 882 381 895Q429 885 480 876" fill="none" stroke="#727575" stroke-width="5" opacity=".6"/>
+<path d="M0 861 41 841 72 880 103 871 138 902 114 936 83 925 50 965H0Z" fill="#c52a25"/>
+<path d="M0 861 41 841 72 880 103 871 138 902 114 936 83 925 50 965H0Z" fill="url(#ornament)" opacity=".85"/>
+<path d="M0 948Q69 932 117 943Q219 921 287 936Q387 919 480 922V960H0Z" fill="#ebe7df"/>
+<rect x="0" y="0" width="480" height="960" fill="url(#linen)" opacity=".6"/>
+</svg>
