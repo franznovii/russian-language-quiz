@@ -5,7 +5,7 @@
  * ENV optional: ACCESS_MODE=pilot|public (defaults pilot), INVITES_ENABLED=yes|no, WEEKLY_ENABLED=yes|no.
  * Source questions staged via POST /admin {action:'stage',questions:[...]}; activate via action:'activate'.
  * NO setWebhook occurs automatically. Existing GAS installation remains unaffected until deliberate switchover.
- * Recommended Cron: */5 16-21 * * 2 [Tuesday 19:00–00:55 Moscow; UTC].
+ * Recommended Tuesday stats Cron: every 5 minutes during 16:00–21:59 UTC.
  * Optional auto-edition: 0 7 * * 2 [Tuesday 10:00 Moscow; UTC; only when WEEKLY_ENABLED=yes].
  */
 const QCOUNT = 6;
