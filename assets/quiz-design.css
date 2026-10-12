@@ -64,12 +64,13 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   padding:0;
   background:#eeeae3;
   background-image:none;
+  min-height:max(100svh, calc(min(100vw, 480px) * 1.7768));
 }
 .page[data-screen="completed-screen"] .site-header{display:none}
 .page[data-screen="completed-screen"] .scene-art{
   inset:0;
   min-height:100svh;
-  background-image:url('./completed-approved-exact.webp');
+  background-image:url('./completed-user-illustration.webp');
   background-size:100% auto;
   background-repeat:no-repeat;
   background-position:center top;
@@ -108,10 +109,10 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
 }
 .page[data-screen="completed-screen"] #completed-result-btn{
   position:absolute!important;
-  top:min(68vw,326px);
+  top:min(64.4vw,309px);
   left:7.4%;
   width:85.2%;
-  height:min(14vw,67px);
+  height:min(13vw,62px);
   min-height:44px;
   margin:0!important;
   padding:0!important;
