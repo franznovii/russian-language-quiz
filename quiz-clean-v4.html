@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#eeeae3">
   <title>вы́Читать — стартовый экран v4</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./assets/quiz-design.css?v=round-sun-20261012-2">
+  <link rel="stylesheet" href="./assets/quiz-design.css?v=completed-art-20261012-v1">
 
 <style>
 /* DESIGN REVISION 2: clean controls. Screenshots of the original art included
@@ -15,7 +15,7 @@
 .page .site-footer{display:none!important}
 .page[data-screen="intro-screen"] .scene-art::before,
 .page[data-screen="connect-screen"] .scene-art::before,
-.page[data-screen="completed-screen"] .scene-art::before{
+.page[data-screen="connect-screen"] .scene-art::before{
   content:"";position:absolute;z-index:1;left:0;right:0;bottom:0;
   height:clamp(55px,9vh,74px);pointer-events:none;
   background:linear-gradient(to bottom,rgba(238,234,227,0),#eeeae3 50%,#eeeae3);
@@ -136,7 +136,7 @@
     </section>
     <section class="mini-screen" id="completed-screen" hidden>
       <h1>Этот выпуск<br><span class="hero-accent">уже пройден.</span></h1>
-      <p class="lead">Ты уже ответил на все вопросы этого выпуска. Повторно пройти его нельзя.</p>
+      <p class="lead">Все вопросы этого выпуска уже отвечены. Повторно его пройти нельзя.</p>
       <button class="primary-btn" id="completed-result-btn" type="button">Посмотреть результат <span>→</span></button>
     </section>
     <section class="mini-screen" id="loading-screen" hidden aria-live="polite">
