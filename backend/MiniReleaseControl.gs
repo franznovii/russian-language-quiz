@@ -69,6 +69,23 @@ function cfReleaseRequireApproval_(){
  */
 function cfReleaseSwitchWebhook() {
   cfReleaseRequireApproval_();
+  // Save the current endpoint privately for rollback. NEVER log its URL:
+  // an old GAS webhook may include a secret in a query parameter.
+  const props=PropertiesService.getScriptProperties();
+  if(!props.getProperty('CF_PREVIOUS_WEBHOOK_URL')){
+    const token=String(props.getProperty('BOT_TOKEN')||'').trim();
+    if(!token)throw new Error('Не настроен BOT_TOKEN');
+    const response=UrlFetchApp.fetch('https://api.telegram.org/bot'+token+'/getWebhookInfo',{
+      muteHttpExceptions:true
+    });
+    let info;
+    try{info=JSON.parse(response.getContentText())}
+    catch(e){throw new Error('Не удалось получить предыдущий webhook')}
+    if(!info.ok)throw new Error('Не удалось проверить предыдущий webhook Telegram');
+    const url=String(info.result?.url||'');
+    if(url&&url!=='https://vychitat.fr-novii.workers.dev/telegram')
+      props.setProperty('CF_PREVIOUS_WEBHOOK_URL',url);
+  }
   const r=cfAdminCall_('configureWebhook',{});
   console.log('Telegram webhook переключён на Cloudflare: '+r.webhook);
   return r;
