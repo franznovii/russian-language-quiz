@@ -12,6 +12,16 @@ const BASE_PAGE = 'https://franznovii.github.io/russian-language-quiz/quiz.html'
 const ORIGINS = new Set(['https://franznovii.github.io', 'https://quiz.libera.me']);
 const CHANNEL = '@posttsop';
 const BOT_LINK = 'https://t.me/posttsop_test_bot?start=quiz';
+const WEBHOOK_ENDPOINT = 'https://vychitat.fr-novii.workers.dev/telegram';
+const PLACEHOLDER_PATTERN = /бла\s+бла|lorem\s+ipsum/i;
+function draftIsReady(questions) {
+  return Array.isArray(questions) && questions.length===QCOUNT &&
+    questions.every(q=>[q.description,q.text,...q.options,q.explanation]
+      .every(x=>typeof x==='string' && !PLACEHOLDER_PATTERN.test(x)));
+}
+function isPilot(env){return String(env.ACCESS_MODE||'pilot').toLowerCase()==='pilot';}
+function isPublic(env){return String(env.ACCESS_MODE||'pilot').toLowerCase()==='public';}
+
 const encoder = new TextEncoder();
 
 function replyJSON(data, status = 200, origin = '') {
@@ -218,6 +228,7 @@ async function callMini(env,body) {
   if (mode==='pilot'&&String(user.id)!==String(env.TEST_CHAT_ID||'')) throw err('Сейчас тест доступен только администратору',403);
   const action=String(body?.action||'');
   const run=await activeEdition(env.DB);
+  if (mode==='public'&&!draftIsReady(run.questions)) throw err('Выпуск готовится. Попробуй позже.',503);
   if (action==='share') return share(env,run,user);
   let state;
   if (action==='state'||action==='checkSubscription'||action==='expire') {
@@ -243,8 +254,13 @@ async function telegramUpdate(env,update) {
   if (message?.chat?.type==='private'&&message.from?.id===message.chat.id&&
       /^\/start(?:\s+[A-Za-z0-9_-]{1,64})?\s*$/.test(String(message.text||''))) {
     await recordContact(env,message.from.id,message.from.first_name);
-    const mode=String(env.ACCESS_MODE||'pilot');
-    const hasAccess=mode==='public'||String(message.from.id)===String(env.TEST_CHAT_ID||'');
+    const mode=String(env.ACCESS_MODE||'pilot').toLowerCase();
+    let publicReady=false;
+    if(mode==='public'){
+      try{publicReady=draftIsReady((await activeEdition(env.DB)).questions);}
+      catch(_){publicReady=false;}
+    }
+    const hasAccess=publicReady||String(message.from.id)===String(env.TEST_CHAT_ID||'');
     await telegram(env,'sendMessage',hasAccess?{
       chat_id:message.chat.id,
       text:'Привет! Это тест по русскому языку от канала <a href="https://t.me/posttsop">вы́Читать</a>.\n\nШесть вопросов, свой таймер на каждый и одна попытка.\n\nНажми кнопку, чтобы открыть приложение.',
@@ -309,8 +325,9 @@ async function adminReport(db,runId=null) {
     statisticsAt:statsAtLabel(run.statsAt),perQuestion,distribution:dist};
 }
 async function sendInvitations(env,limit=20) {
-  if (env.ACCESS_MODE!=='public'||env.INVITES_ENABLED!=='yes') throw err('Рассылки выключены');
+  if (!isPublic(env)||env.INVITES_ENABLED!=='yes') throw err('Рассылки выключены');
   const run=await activeEdition(env.DB);
+  if(!draftIsReady(run.questions)) throw err('Пока используются тестовые вопросы. Рассылка запрещена.');
   const {results=[]}=await env.DB.prepare(`SELECT c.telegram_id FROM mini_contacts c
     WHERE c.active=1 AND NOT EXISTS(SELECT 1 FROM mini_invitations i WHERE i.run_id=? AND i.telegram_id=c.telegram_id)
     ORDER BY c.first_started_at LIMIT ?`).bind(run.id,Math.min(20,Math.max(1,Number(limit)||20))).all();
@@ -340,28 +357,36 @@ async function adminAction(env,body) {
       const run = await activeEdition(env.DB);
       const bot = await telegram(env,'getMe',{});
       const hook = await telegram(env,'getWebhookInfo',{});
-      const placeholders = run.questions.filter(q=>/бла\s+бла/i.test(String(q.description||'')+' '+String(q.text||'')));
+      const placeholders = run.questions.filter(q=>[q.description,q.text,...q.options,q.explanation]
+        .some(x=>PLACEHOLDER_PATTERN.test(String(x||''))));
+      const globalMenu = await telegram(env,'getChatMenuButton',{});
+      const privateMenu = env.TEST_CHAT_ID
+        ? await telegram(env,'getChatMenuButton',{chat_id:Number(env.TEST_CHAT_ID)})
+        : null;
       return {ok:true,runId:run.id,statisticsAt:statsAtLabel(run.statsAt),
         launchUrl:BASE_PAGE,botUsername:bot.username,
-        webhookUrl:hook.url==='https://vychitat.fr-novii.workers.dev/telegram'?hook.url:(hook.url?'OTHER':''),webhookLastError:hook.last_error_message||null,
-        accessMode:String(env.ACCESS_MODE||'pilot'),
+        webhookUrl:hook.url===WEBHOOK_ENDPOINT?hook.url:(hook.url?'OTHER':''),webhookLastError:hook.last_error_message||null,
+        accessMode:String(env.ACCESS_MODE||'pilot').toLowerCase(),
         invitationsEnabled:env.INVITES_ENABLED==='yes',weeklyEnabled:env.WEEKLY_ENABLED==='yes',
-        questionCount:run.questions.length,placeholderCount:placeholders.length};
+        questionCount:run.questions.length,placeholderCount:placeholders.length,
+        readyForPublic:draftIsReady(run.questions),
+        globalMenuReady:globalMenu?.type==='web_app'&&globalMenu?.web_app?.url===BASE_PAGE,
+        privateMenuReady:privateMenu?.type==='web_app'&&privateMenu?.web_app?.url===BASE_PAGE};
     }
     case 'configureWebhook': {
-      if(env.ACCESS_MODE!=='public') throw err('Сначала включи ACCESS_MODE=public');
+      if(!isPublic(env)&&!isPilot(env)) throw err('ACCESS_MODE должен быть pilot или public');
       const run=await activeEdition(env.DB);
-      if(run.questions.some(q=>/бла\s+бла/i.test(String(q.description||'')+' '+String(q.text||''))))
+      if(isPublic(env)&&!draftIsReady(run.questions))
         throw err('Пока активны тестовые вопросы. Сначала опубликуй настоящий выпуск.');
       const secret=String(env.WEBHOOK_SECRET||'');
       if(!/^[A-Za-z0-9_-]{32,256}$/.test(secret)) throw err('WEBHOOK_SECRET должен содержать 32–256 букв/цифр/знаков -_');
       await telegram(env,'setWebhook',{
-        url:'https://vychitat.fr-novii.workers.dev/telegram',
+        url:WEBHOOK_ENDPOINT,
         secret_token:secret,
         allowed_updates:['message'],
         drop_pending_updates:false
       });
-      return {ok:true,webhook:'https://vychitat.fr-novii.workers.dev/telegram'};
+      return {ok:true,webhook:WEBHOOK_ENDPOINT};
     }
 
     case 'sendPilotButton': {
@@ -383,10 +408,19 @@ async function adminAction(env,body) {
     }
     case 'sendInvitations': return sendInvitations(env,body.limit);
     case 'configureMenu': {
-      if (env.ACCESS_MODE!=='public') throw err('Сначала включи публичный режим');
-      await telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть тест',web_app:{url:BASE_PAGE}}});
-      await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть тест'}]});
-      return {ok:true};
+      if(!isPilot(env)&&!isPublic(env)) throw err('Неверный режим ACCESS_MODE');
+      const active=await activeEdition(env.DB);
+      if(isPublic(env)&&!draftIsReady(active.questions))
+        throw err('В активном выпуске ещё тестовые вопросы. Публичное меню запрещено.');
+      const privateOnly=isPilot(env);
+      if(privateOnly&&!/^[1-9]\\d{4,19}$/.test(String(env.TEST_CHAT_ID||'')))
+        throw err('Для личного меню настрой TEST_CHAT_ID');
+      const request={menu_button:{type:'web_app',text:'Открыть тест',web_app:{url:BASE_PAGE}}};
+      if(privateOnly)request.chat_id=Number(env.TEST_CHAT_ID);
+      await telegram(env,'setChatMenuButton',request);
+      if(!privateOnly)
+        await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть тест'}]});
+      return {ok:true,mode:privateOnly?'private_pilot':'public_global'};
     }
     default: throw err('Неизвестная административная операция');
   }
@@ -431,7 +465,7 @@ export default {
     // Both triggers use UTC: Tuesday 07:00 UTC = 10:00 Moscow, and a
     // controlled continuation of invitations every 5 minutes.
     if (controller.cron==='0 7 * * 2') {
-      if(env.ACCESS_MODE!=='public'||env.WEEKLY_ENABLED!=='yes') return;
+      if(!isPublic(env)||env.WEEKLY_ENABLED!=='yes') return;
       ctx.waitUntil((async()=>{
         const action=await activateDraft(env.DB,false);
         if (action.created&&env.INVITES_ENABLED==='yes') await sendInvitations(env,20);
