@@ -20,7 +20,11 @@ function cfReleasePreflight() {
   console.log('Webhook: '+(check.webhookUrl||'не задан'));
   console.log('Приглашения: '+check.invitationsEnabled);
   console.log('Недельный цикл: '+check.weeklyEnabled);
-  if(check.placeholderCount>0)console.warn('СТОП! В текущем выпуске тестовые вопросы.');
+  console.log('Готовность к публикации: '+check.readyForPublic);
+  console.log('Общее меню: '+check.globalMenuReady);
+  console.log('Личное меню: '+check.privateMenuReady);
+  if(check.webhookLastError)console.warn('Telegram сообщает об ошибке доставки webhook: '+check.webhookLastError);
+  if(check.placeholderCount>0)console.warn('СТОП для публичного режима: в выпуске тестовые вопросы.');
   return check;
 }
 
