@@ -96,6 +96,7 @@
     .cover-fallback[hidden]{display:none!important}
     @media(prefers-reduced-motion:reduce){#connect-screen{animation:none!important}}
   </style>
+  <link rel="stylesheet" href="./assets/quiz-question-v1.css?v=1">
 </head>
 <body class="cover-mode">
 <div class="page">
@@ -238,7 +239,12 @@ function startClock(){
   renderCountdown();
 }
 
-function show(screen){document.body.classList.toggle('cover-mode',screen==='connect-screen');screens.forEach(s=>{el(s).hidden=s!==screen});window.scrollTo(0,0)}
+function show(screen){
+  document.body.classList.toggle('cover-mode',screen==='connect-screen');
+  document.body.classList.toggle('question-poster',screen==='question-screen');
+  screens.forEach(s=>{el(s).hidden=s!==screen});
+  window.scrollTo(0,0);
+}
 function logError(id,message){el(id).textContent=message;el(id).classList.add("status-error")}
 const CLOUDFLARE_API = "https://vychitat.fr-novii.workers.dev/api";
 async function call(action,payload){
@@ -302,6 +308,18 @@ async function beginQuestion(){
     el("resume-text").textContent="Ошибка: "+String(e.message||e);
   }finally{el("begin-btn").disabled=false}
 }
+function setPosterQuestionTitle(value){
+  const title=el("question-text");
+  const text=String(value||"");
+  const match=text.match(/^([\s\S]*?)([^\s]+[?!])\s*$/u);
+  title.replaceChildren();
+  if(!match){title.textContent=text;return}
+  title.append(document.createTextNode(match[1]));
+  const highlight=document.createElement("span");
+  highlight.className="question-accent";
+  highlight.textContent=match[2];
+  title.append(highlight);
+}
 function renderQuestion(){
   showingFeedback=false;selection=new Set();clockPending=false;
   currentIndex=currentState.answers.length;
@@ -310,10 +328,11 @@ function renderQuestion(){
     logError("resume-text","Следующий вопрос ещё не открыт. Нажми «Продолжить тест».");
     show("intro-screen");return
   }
-  el("question-count").textContent="Вопрос "+q.id+"/6";
+  el("question-count").textContent="Вопрос "+q.id+" из 6";
   el("question-type").textContent=q.multiple?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
   el("progress").style.width=((currentIndex/6)*100)+"%";
-  el("question-text").textContent=q.text;
+  setPosterQuestionTitle(q.text);
+  el("question-screen").classList.toggle("long-question",String(q.text||"").length>92);
   el("description").hidden=!q.description;
   el("description").textContent=q.description || "";
   el("explanation").hidden=true;
