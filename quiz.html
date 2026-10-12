@@ -7,8 +7,19 @@
   <meta name="theme-color" content="#eeeae3">
   <title>вы́Читать — Тест по русскому языку</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./assets/quiz-design.css?v=20261012">
-</head>
+  <link rel="stylesheet" href="./assets/quiz-design.css?v=20261012-clean2">
+<style>
+/* DESIGN REVISION 2: clean controls. Screenshots of the original art included
+   a tiny printed bot handle in the lower visual border. Cover ONLY that strip. */
+.page .site-footer{display:none!important}
+.page[data-screen="intro-screen"] .scene-art::before,
+.page[data-screen="connect-screen"] .scene-art::before,
+.page[data-screen="completed-screen"] .scene-art::before{
+  content:"";position:absolute;z-index:1;left:0;right:0;bottom:0;
+  height:clamp(55px,9vh,74px);pointer-events:none;
+  background:linear-gradient(to bottom,rgba(238,234,227,0),#eeeae3 50%,#eeeae3);
+}
+</style></head>
 <body>
 <div class="page" data-screen="connect-screen">
   <header class="site-header"><img class="logo-img" src="./assets/vychitat-logo.png" alt="вы́Читать" width="212" height="100"></header>
