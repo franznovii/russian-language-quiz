@@ -5,7 +5,8 @@
  * ENV optional: ACCESS_MODE=pilot|public (defaults pilot), INVITES_ENABLED=yes|no, WEEKLY_ENABLED=yes|no.
  * Source questions staged via POST /admin {action:'stage',questions:[...]}; activate via action:'activate'.
  * NO setWebhook occurs automatically. Existing GAS installation remains unaffected until deliberate switchover.
- * Cron schedule (optional): 0 7 * * 2  [Tuesday 10:00 Moscow; UTC]
+ * Recommended Cron: */5 16-21 * * 2 [Tuesday 19:00–00:55 Moscow; UTC].
+ * Optional auto-edition: 0 7 * * 2 [Tuesday 10:00 Moscow; UTC; only when WEEKLY_ENABLED=yes].
  */
 const QCOUNT = 6;
 const BASE_PAGE = 'https://franznovii.github.io/russian-language-quiz/quiz.html';
@@ -540,11 +541,6 @@ export default {
   async scheduled(controller,env,ctx) {
     // Both triggers use UTC: Tuesday 07:00 UTC = 10:00 Moscow, and a
     // controlled continuation of invitations every 5 minutes.
-    if (controller.cron==='0 16 * * 2') {
-      if(!isPublic(env)||env.STATS_PUSH_ENABLED!=='yes')return;
-      ctx.waitUntil(dispatchEveningStats(env,20));
-      return;
-    }
     if (controller.cron==='0 7 * * 2') {
       if(!isPublic(env)||env.WEEKLY_ENABLED!=='yes') return;
       ctx.waitUntil((async()=>{
@@ -553,7 +549,7 @@ export default {
       })());
       return;
     }
-    if(controller.cron==='*/5 * * * *'&&isPublic(env)) {
+    if((controller.cron==='*/5 16-21 * * 2'||controller.cron==='*/5 * * * *')&&isPublic(env)) {
       ctx.waitUntil((async()=>{
         const active=await activeEdition(env.DB);
         if(env.INVITES_ENABLED==='yes'){
