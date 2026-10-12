@@ -167,6 +167,12 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 @media(max-height:670px){.site-header{padding-top:17px;padding-bottom:10px}#question-screen #question-text{font-size:32px}#question-screen .description-text{padding:12px 13px}.primary-btn{min-height:55px}}
 @media(prefers-reduced-motion:reduce){.loader:not(:empty):before{animation:none}}
 
+
+/* Keep ГРАМОТНОСТЬ? on one line at mobile widths, without overflowing. */
+#intro-screen .intro-title{width:100%;max-width:100%;margin-top:22px;line-height:1.04}
+#intro-screen .intro-title-top{display:block;font-size:clamp(51px,13.8vw,78px);white-space:nowrap}
+#intro-screen .intro-title-bottom{display:block;white-space:nowrap;font-size:clamp(27px,8.8vw,48px);line-height:1.18;letter-spacing:-.035em;overflow:visible}
+@media(max-width:330px){#intro-screen .intro-title-bottom{font-size:8.5vw}}
 </style>
 </head>
 <body>
@@ -213,7 +219,7 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 
     <section class="mini-screen" id="intro-screen" hidden>
       <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
-      <h1>Проверим<br><span class="hero-accent">грамотность?</span></h1>
+      <h1 class="intro-title"><span class="intro-title-top">Проверим</span><span class="hero-accent intro-title-bottom">грамотность?</span></h1>
       <p class="lead" id="intro-greeting"></p>
       <div class="intro-visual" aria-hidden="true">
         <div class="big-letter">Я</div><span class="visual-note">Тут надо<br>подумать.</span><span class="visual-star">✳</span>
