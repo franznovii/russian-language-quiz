@@ -76,7 +76,9 @@ function cfReleaseSwitchWebhook() {
 
 /** Устанавливает кнопку Telegram-меню на финальную страницу. */
 function cfReleaseSwitchMenu() {
-  cfReleaseRequireApproval_();
+  const check=cfReleaseRequireApproval_();
+  if(check.webhookUrl!=='https://vychitat.fr-novii.workers.dev/telegram')
+    throw new Error('Сначала переключи webhook функцией cfReleaseSwitchWebhook.');
   const r=cfAdminCall_('configureMenu',{});
   console.log('Меню Telegram переключено на финальный интерфейс.');
   return r;
