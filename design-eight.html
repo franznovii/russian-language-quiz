@@ -1,0 +1,28 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>вы́Читать — 8 экранов</title>
+<style>*{box-sizing:border-box}body{background:#ddd9d1;color:#222;font:16px Arial,sans-serif;margin:0;padding:30px}h1{font-size:25px;margin:0 0 9px}p{font-size:14px;color:#555;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(4,234px);gap:25px 18px;justify-content:center}.frame{width:234px;height:456px;overflow:hidden;box-shadow:0 3px 12px #0003;background:#eeeae3}iframe{width:390px;height:760px;border:0;transform:scale(.6);transform-origin:0 0}h2{font-size:13px;font-weight:500;margin:0 0 10px}@media(max-width:1040px){.grid{grid-template-columns:repeat(2,234px)}}@media(max-width:535px){.grid{grid-template-columns:234px}body{padding:22px}}.error{color:#a22}</style>
+<h1>вы́Читать · восемь экранов</h1><p>Рабочая вёрстка с демонстрационными данными. Результаты теста не изменяются.</p><div class="grid" id="grid"></div>
+<script>
+(async()=>{
+const response=await fetch('./quiz.html');if(!response.ok)throw Error('Не удалось загрузить макеты');let source=await response.text();
+source=source.replace(/<script src="https:\/\/telegram.org[^>]*><\/script>/,'');
+const base=new URL('./',location.href).href;source=source.replace('<head>','<head><base href="'+base+'">');
+const names=['Старт','Вопрос','Объяснение ответа','Результат','Статистика','Карточка результата','Выпуск уже пройден','Загрузка'];
+for(let i=0;i<8;i++){
+const card=document.createElement('div');const heading=document.createElement('h2');heading.textContent=(i+1)+'. '+names[i];const wrap=document.createElement('div');wrap.className='frame';const frame=document.createElement('iframe');frame.title=names[i];
+const setup=`
+currentState={ok:true,userName:'Саша',questions:Array.from({length:6},(_,i)=>({id:i+1,text:'В каком предложении правильно поставлено ударение?',options:['Он звонит по каталОгу.','Он звонит по катАлогу.','Он звонит по кАталогу.','Он звонит по каталогУ.']})),answers:[],activeTimer:null,score:2,subscriptionStatus:'member',statisticsAt:'12.10.2026 19:00',statsReady:false};
+const previewScreen=${i};
+if(previewScreen===0)showInitialState();
+if(previewScreen===1||previewScreen===2){currentState.activeTimer={deadlineMs:Date.now()+18000,durationSec:60};renderQuestion();stopClock();choose(1,false);if(previewScreen===2){currentState.answers=[{questionId:1,correct:true,selected:[0],correctOptions:[0],explanation:'Ударение в слове «каталог» падает на третий слог: каталОг.'}];showFeedback()}}
+if(previewScreen===3){currentState.complete=true;renderFinish()}
+if(previewScreen===4){currentState.complete=true;currentState.statistics=[62,71,54,37,68,55].map((n,i)=>({questionId:i+1,correctPercent:n,incorrectPercent:100-n}));renderFinish();show('statistics-screen')}
+if(previewScreen===5){currentState.complete=true;el('share-score').textContent='2';show('share-screen')}
+if(previewScreen===6)show('completed-screen');
+if(previewScreen===7)show('loading-screen');
+// Demonstration never contacts the quiz backend.
+window.fetch=async()=>{throw new Error('Это просмотр дизайна. Открой тест в Telegram.')};
+`;
+frame.srcdoc=source.replace('</body>','<script>'+setup+'<\/script></body>');wrap.append(frame);card.append(heading,wrap);document.getElementById('grid').append(card);
+}
+})().catch(e=>{document.getElementById('grid').textContent=e.message});
+</script></html>
