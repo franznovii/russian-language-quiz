@@ -187,6 +187,27 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 #done-screen h1{font-size:clamp(48px,12.5vw,68px);margin-bottom:9px}
 #done-screen h1 .hero-accent{color:var(--accent)}
 #done-screen .lead{font:clamp(18px,5vw,23px)/1.35 Georgia,serif}
+
+/* Экран 11: two translucent paper panels; original text layout stays untouched. */
+#connect-screen.is-loading > .lead,
+#connect-screen.is-loading > .resume{
+  position:relative;
+  isolation:isolate;
+  color:#181818;
+}
+#connect-screen.is-loading > .lead::before,
+#connect-screen.is-loading > .resume::before{
+  content:"";
+  position:absolute;
+  inset:-11px -14px;
+  z-index:-1;
+  background:rgba(249,247,241,.88);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  border:1px solid rgba(255,255,255,.45);
+  pointer-events:none;
+}
+
 </style>
 <style>
 .reviewer{position:fixed;z-index:100;bottom:9px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#171717;border:1px solid #555;color:#fff;padding:8px 12px;max-width:calc(100vw - 16px);border-radius:25px;box-shadow:0 4px 18px #0005}
@@ -388,14 +409,14 @@ el("share-result-btn").addEventListener("click",()=>{el("question-status").textC
 el("done-share-btn").addEventListener("click",()=>el("share-result-btn").click());
 el("design-switch").addEventListener("change",e=>{
  const mode=e.target.value;
- if(mode==="intro"||mode==="connect"){visible(mode);return}
+ if(mode==="intro"||mode==="connect"){el("connect-screen").classList.remove("is-loading");el("connect-status").textContent="";visible(mode);return}
  if(mode==="question"){items[0].options=Array.from({length:6},(_,i)=>"Вариант ответа "+(i+1));return showMockQuestion(0)}
  if(mode==="ten"){showMockQuestion(0);const q=items[0];q.options.splice(0,q.options.length,...Array.from({length:10},(_,i)=>"Пример длинного варианта ответа № "+(i+1)));showMockQuestion(0);updateSelector("ten");return}
  if(mode==="correct"){showMockQuestion(0);selected.add(1);checkMock();return}
  if(mode==="wrong"){showMockQuestion(0);selected.add(0);checkMock();return}
  if(mode==="timeout"){showMockQuestion(0);selected.clear();feedback=true;el("timer-chip").textContent="00:00";el("timer-chip").classList.add("urgent","expired");el("timer-track").classList.add("urgent");el("timer-fill").style.width="0%";updateSelector("timeout");const ex=el("explanation");ex.hidden=false;ex.classList.add("wrong");ex.replaceChildren();const title=document.createElement("strong");title.textContent="Время вышло!";const p=document.createElement("p");p.textContent="Ответ не засчитан. Дальше — следующий вопрос.";ex.append(title,p);el("answer-btn").disabled=false;el("answer-btn").firstChild.textContent="Следующий вопрос ";return}
  if(mode==="stats"||mode==="result"){corrects=2;showResult(mode);return}
- if(mode==="loading"){visible("connect");el("connect-status").textContent="Проверяем Telegram и загружаем вопросы…";updateSelector("loading");return}
+ if(mode==="loading"){visible("connect");el("connect-screen").classList.add("is-loading");el("connect-status").textContent="Проверяем Telegram и загружаем вопросы…";updateSelector("loading");return}
  if(mode==="done"){corrects=2;visible("done");el("done-score").textContent=String(corrects);updateSelector("done");return}
 });
 el("design-switch").value="connect";
