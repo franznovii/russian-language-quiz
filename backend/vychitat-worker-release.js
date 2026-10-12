@@ -202,6 +202,77 @@ async function publicStatistics(db,run) {
       incorrectPercent:total?Math.round((total-good)*100/total):0};
   });
 }
+
+/**
+ * Snapshot of the first statistics cut taken at 19:00 Moscow.
+ * All recipients receive exactly the same percentages, even when answers
+ * continue arriving after 19:00.
+ */
+async function statisticsSnapshot(db,run) {
+  let row=await db.prepare('SELECT snapshot_json,created_at FROM mini_stats_snapshots WHERE run_id=?')
+    .bind(run.id).first();
+  if(!row){
+    const snapshot=await publicStatistics(db,run);
+    await db.prepare('INSERT OR IGNORE INTO mini_stats_snapshots(run_id,snapshot_json) VALUES(?,?)')
+      .bind(run.id,JSON.stringify(snapshot)).run();
+    row=await db.prepare('SELECT snapshot_json,created_at FROM mini_stats_snapshots WHERE run_id=?')
+      .bind(run.id).first();
+  }
+  if(!row)throw err('Не удалось сохранить вечерний срез статистики',503);
+  return {data:JSON.parse(row.snapshot_json),createdAt:Number(row.created_at)};
+}
+
+/**
+ * Up to 20 personal Telegram messages per batch. Only users who finished
+ * before the frozen snapshot and were subscribed at delivery time.
+ * Never exposes absolute participant counts.
+ */
+async function dispatchEveningStats(env,limit=20) {
+  if(env.STATS_PUSH_ENABLED!=='yes') throw err('Вечерняя рассылка статистики выключена');
+  const run=await activeEdition(env.DB);
+  if(timestamp()<run.statsAt) throw err('Ещё нет 19:00 МСК');
+  const frozen=await statisticsSnapshot(env.DB,run);
+  const count=Math.max(1,Math.min(20,Number(limit)||20));
+  const {results=[]}=await env.DB.prepare(`
+    SELECT p.telegram_id FROM mini_participants p
+    JOIN mini_contacts c ON c.telegram_id=p.telegram_id AND c.active=1
+    WHERE p.run_id=?
+      AND (SELECT COUNT(*) FROM mini_answers a
+           WHERE a.run_id=p.run_id AND a.telegram_id=p.telegram_id)=6
+      AND (SELECT MAX(answered_at) FROM mini_answers a
+           WHERE a.run_id=p.run_id AND a.telegram_id=p.telegram_id)<=?
+      AND NOT EXISTS(SELECT 1 FROM mini_stats_deliveries d
+                     WHERE d.run_id=p.run_id AND d.telegram_id=p.telegram_id)
+    ORDER BY p.started_at,p.telegram_id LIMIT ?`)
+    .bind(run.id,frozen.createdAt,count).all();
+  const lines=frozen.data.map(q=>'Вопрос '+q.questionId+': '+q.correctPercent+
+    '% верно · '+q.incorrectPercent+'% неверно');
+  const message='«вы́Читать» — результаты теста на 19:00 МСК.\n\n'+
+    lines.join('\n')+'\n\nЭто проценты правильных и неправильных ответов по каждому вопросу на 19:00.\n'+
+    'Открыть тест: '+BOT_LINK;
+  let sent=0,notMember=0,blocked=0,errors=0;
+  for(const item of results){
+    const member=await getMembership(env,item.telegram_id);
+    if(member==='unavailable'){errors++;continue;}
+    let outcome='not_member';
+    if(member==='member'){
+      try{
+        await telegram(env,'sendMessage',{chat_id:item.telegram_id,
+          text:message,disable_web_page_preview:true});
+        sent++;outcome='sent';
+      }catch(e){
+        if(/403/.test(String(e.message))){blocked++;outcome='blocked';
+          await env.DB.prepare('UPDATE mini_contacts SET active=0 WHERE telegram_id=?')
+            .bind(item.telegram_id).run();
+        }else {errors++;break;}
+      }
+    }else notMember++;
+    await env.DB.prepare('INSERT OR IGNORE INTO mini_stats_deliveries(run_id,telegram_id,status) VALUES(?,?,?)')
+      .bind(run.id,item.telegram_id,outcome).run();
+  }
+  return {ok:true,runId:run.id,sent,notMember,blocked,errors};
+}
+
 async function applyGate(env,run,user,state) {
   if (!state.complete) return state;
   state.subscriptionStatus=await getMembership(env,user.id);
@@ -369,6 +440,7 @@ async function adminAction(env,body) {
         accessMode:String(env.ACCESS_MODE||'pilot').toLowerCase(),
         invitationsEnabled:env.INVITES_ENABLED==='yes',weeklyEnabled:env.WEEKLY_ENABLED==='yes',
         questionCount:run.questions.length,placeholderCount:placeholders.length,
+        statsPushEnabled:env.STATS_PUSH_ENABLED==='yes',
         readyForPublic:draftIsReady(run.questions),
         globalMenuReady:globalMenu?.type==='web_app'&&globalMenu?.web_app?.url===BASE_PAGE,
         privateMenuReady:privateMenu?.type==='web_app'&&privateMenu?.web_app?.url===BASE_PAGE};
@@ -407,6 +479,7 @@ async function adminAction(env,body) {
       return {ok:true,processed:added};
     }
     case 'sendInvitations': return sendInvitations(env,body.limit);
+    case 'sendEveningStats': return dispatchEveningStats(env,body.limit);
     case 'configureMenu': {
       if(!isPilot(env)&&!isPublic(env)) throw err('Неверный режим ACCESS_MODE');
       const active=await activeEdition(env.DB);
@@ -464,6 +537,11 @@ export default {
   async scheduled(controller,env,ctx) {
     // Both triggers use UTC: Tuesday 07:00 UTC = 10:00 Moscow, and a
     // controlled continuation of invitations every 5 minutes.
+    if (controller.cron==='0 16 * * 2') {
+      if(!isPublic(env)||env.STATS_PUSH_ENABLED!=='yes')return;
+      ctx.waitUntil(dispatchEveningStats(env,20));
+      return;
+    }
     if (controller.cron==='0 7 * * 2') {
       if(!isPublic(env)||env.WEEKLY_ENABLED!=='yes') return;
       ctx.waitUntil((async()=>{
@@ -472,10 +550,18 @@ export default {
       })());
       return;
     }
-    if(controller.cron==='*/5 * * * *'&&env.ACCESS_MODE==='public'&&env.INVITES_ENABLED==='yes') {
+    if(controller.cron==='*/5 * * * *'&&isPublic(env)) {
       ctx.waitUntil((async()=>{
-        const active=await env.DB.prepare("SELECT created_at FROM mini_editions WHERE status='ACTIVE' ORDER BY created_at DESC LIMIT 1").first();
-        if(active&&timestamp()-Number(active.created_at)<7*86400) await sendInvitations(env,20);
+        const active=await activeEdition(env.DB);
+        if(env.INVITES_ENABLED==='yes'){
+          const row=await env.DB.prepare('SELECT created_at FROM mini_editions WHERE run_id=?')
+            .bind(active.id).first();
+          if(row&&timestamp()-Number(row.created_at)<7*86400) await sendInvitations(env,20);
+        }
+        if(env.STATS_PUSH_ENABLED==='yes'&&timestamp()>=active.statsAt&&
+           timestamp()-active.statsAt<6*3600){
+          await dispatchEveningStats(env,20);
+        }
       })());
     }
   }
