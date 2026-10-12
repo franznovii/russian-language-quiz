@@ -64,7 +64,7 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   padding:0;
   background:#eeeae3;
   background-image:none;
-  min-height:max(100svh, calc(min(100vw, 480px) * 1.7768));
+  min-height:max(100svh, min(177.68vw, 853px));
 }
 .page[data-screen="completed-screen"] .site-header{display:none}
 .page[data-screen="completed-screen"] .scene-art{
