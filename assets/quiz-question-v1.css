@@ -1,0 +1,141 @@
+/* вы́Читать · живой экран вопросов, коллажный плакат. 2026-10-12.
+   Работает поверх style.css и базовых стилей pilot-cloudflare.html.
+   НЕ заменяет DOM-кнопки, обработчики таймера и Cloudflare API. */
+@font-face {
+  font-family: "QuizOswald";
+  src: url("./oswald-bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+body.question-poster {
+  --paper:#eeeae3;--ink:#1c1c1d;--muted:#494741;--line:#c2bdb5;--accent:#b92625;--card:#f5f4f1;--green:#3c6b4d;
+  background:#eeeae3;color:#1a1a1a;
+}
+body.question-poster .page {
+  position:relative;isolation:isolate;max-width:540px;min-height:100dvh;
+  padding:0 22px max(14px,env(safe-area-inset-bottom));
+  background:#ebe9e2 url("./quiz-question-art.svg") center top/100% max(100%,960px) no-repeat;
+  overflow:hidden;
+}
+body.question-poster .page::before {
+  content:"";pointer-events:none;position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(90deg,rgba(239,237,231,.12) 0%,rgba(239,237,231,.5) 60%,transparent 93%);
+}
+body.question-poster .site-header {display:none}
+body.question-poster .site-footer{
+  border:0;margin:9px 0 0;padding:9px 0 3px;
+  justify-content:center;color:#67615c;font:11px/1.5 Arial,sans-serif;
+}
+body.question-poster .site-footer span:first-child {display:none}
+body.question-poster .site-footer span:last-child {font-size:0}
+body.question-poster .site-footer span:last-child::after{content:"@posttsop_test_bot";font-size:11px}
+body.question-poster .mini-screen:not([hidden])#question-screen{
+  padding:19px 0 4px;min-height:calc(100dvh - 34px);
+  display:flex;flex-direction:column;animation:none;
+}
+body.question-poster .quiz-head {
+  order:0;position:static;background:transparent;padding:4px 0 10px;
+  font-family:"QuizOswald","Arial Narrow",Impact,sans-serif;font-size:17px;
+  color:#1a1a1a;letter-spacing:0;line-height:1.2;gap:12px;
+}
+body.question-poster .time-chip {
+  border:0;min-width:0;padding:0;background:transparent;
+  font:700 18px/1.2 "QuizOswald","Arial Narrow",Impact,sans-serif;color:#1a1a1a;
+}
+body.question-poster .time-chip::before{content:"◴";font:25px/1 Arial,sans-serif;margin-right:8px;vertical-align:-2px}
+body.question-poster .time-chip.urgent{color:#b92625;background:transparent;border:0}
+body.question-poster .timer-track{
+  order:1;height:6px;background:#a5a29a;overflow:hidden;margin:0 0 12px;
+  border:0;border-radius:3px;
+}
+body.question-poster .timer-track>div{height:100%;background:#ba2625;transition:width .2s linear}
+body.question-poster .timer-track.urgent>div{background:#d52d27}
+body.question-poster .quiz-progress{display:none}
+body.question-poster .test-label{
+  order:2;background:rgba(241,239,232,.83);align-self:flex-start;
+  padding:4px 6px 3px;margin-top:3px;
+  color:#625d55;font:bold 10px/1.3 Arial,sans-serif;letter-spacing:.16em
+}
+body.question-poster #question-text{
+  order:3;flex:0 0 auto;max-width:100%;margin:clamp(48px,8vh,95px) 0 18px;
+  padding:2px 6px 2px 0;
+  font:700 clamp(32px,9.3vw,48px)/1.08 "QuizOswald","Arial Narrow",Impact,sans-serif;
+  letter-spacing:-.017em;color:#181818;overflow-wrap:anywhere;
+  text-wrap:pretty;text-shadow:0 1px 0 rgba(245,242,236,.3)
+}
+body.question-poster #question-text .question-accent{color:#bc2926}
+body.question-poster #question-screen.long-question #question-text{
+  font-size:clamp(25px,7.1vw,37px);margin-top:clamp(24px,4vh,45px);
+  line-height:1.12;
+}
+body.question-poster #description{
+  order:4;background:rgba(245,242,236,.94);border-left:3px solid #be2926;
+  color:#222;padding:14px 16px;margin:0 0 13px;
+  font:15px/1.5 Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere;
+}
+body.question-poster .question-options {
+  order:5;display:grid;gap:9px;margin:10px 0 14px;position:relative;z-index:1;
+}
+body.question-poster .question-choice {
+  width:100%;min-height:59px;display:flex;align-items:center;gap:13px;
+  padding:12px 14px;border:1px solid rgba(164,161,153,.8);border-radius:3px;
+  background:rgba(247,246,244,.96);color:#202020;
+  font:16px/1.36 Georgia,"Times New Roman",serif;
+  text-align:left;box-shadow:0 3px 8px rgba(0,0,0,.03);
+  overflow-wrap:anywhere;
+}
+body.question-poster .question-choice .marker {
+  display:grid;place-items:center;width:22px;height:22px;min-width:22px;
+  border-radius:50%;border:2px solid #888982;font-size:0;color:transparent;
+  background:transparent;flex:0 0 22px;
+}
+body.question-poster .question-choice.selected {
+  color:#fff;background:#bd2425;border-color:#a62121;
+}
+body.question-poster .question-choice.selected .marker {
+  background:radial-gradient(circle,#c62a29 0 4px,#fff 5px 10px,transparent 11px);
+  border-color:#fff;
+}
+body.question-poster .question-choice:disabled {opacity:1}
+body.question-poster .question-choice.right {box-shadow:inset 0 0 0 2px #37694e;border-color:#37694e}
+body.question-poster .question-choice.wrong {box-shadow:inset 0 0 0 2px #8f2625}
+body.question-poster .question-choice:focus-visible{outline:3px solid #292725;outline-offset:2px}
+body.question-poster #answer-btn{
+  order:7;position:static;z-index:1;margin:auto 0 0;
+  width:100%;min-height:59px;padding:13px 19px;
+  background:#171717;color:#fff;border:0;border-radius:2px;
+  font:700 24px/1.2 "QuizOswald","Arial Narrow",Impact,sans-serif;
+  text-align:center;display:flex;justify-content:center;align-items:center;gap:10px;
+}
+body.question-poster #answer-btn span{margin-left:auto;font:25px Arial,sans-serif}
+body.question-poster #answer-btn::before{content:"";margin-left:auto;width:22px}
+body.question-poster #answer-btn:disabled{opacity:.53}
+body.question-poster #answer-btn:not(:disabled):active{background:#bd2425}
+body.question-poster #question-status {order:8;margin:8px 0 0;background:#efece6db}
+body.question-poster .explanation {
+  order:6;margin:12px 0 18px;border-left:4px solid #426d52;
+  padding:14px 15px;background:rgba(242,243,237,.95);
+  font:15px/1.55 Georgia,serif;color:#222
+}
+body.question-poster .explanation strong {
+  display:block;margin-bottom:8px;font:700 32px/1.1 "QuizOswald",Impact,sans-serif;
+  color:#2d694b;
+}
+body.question-poster .explanation.wrong{border-color:#bd2425;background:rgba(251,235,232,.94)}
+body.question-poster .explanation.wrong strong{color:#ba2825}
+body.question-poster .explanation p {margin:0}
+@media (max-width:360px){
+ body.question-poster .page{padding-left:16px;padding-right:16px}
+ body.question-poster #question-text{font-size:clamp(29px,9.4vw,38px);margin-top:48px}
+ body.question-poster #question-screen.long-question #question-text{font-size:clamp(24px,7vw,33px)}
+ body.question-poster .question-choice{font-size:14px;min-height:54px;padding:10px 11px}
+}
+@media (max-height:660px){
+ body.question-poster #question-text{margin-top:26px;font-size:clamp(28px,7.7vw,37px)}
+ body.question-poster .question-choice{min-height:52px;padding:9px 12px}
+ body.question-poster #answer-btn{min-height:53px}
+}
+@media (prefers-reduced-motion:reduce){
+ body.question-poster *{animation:none!important;transition:none!important}
+}
