@@ -58,6 +58,24 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--
 @media(min-width:750px){body{padding:35px 0}.stage{min-height:760px}.view{min-height:640px}#shell{min-height:820px;border:8px solid #1d1d1d;border-radius:26px}.view-picker{bottom:22px}}
 @media(max-width:350px){.stage{padding-left:17px;padding-right:17px}.hero-title{font-size:49px}.question-title{font-size:34px}.view-picker label{display:none}}
 @media(prefers-reduced-motion:reduce){.ring{animation:none}}
+
+/* Responsive long-question stress-test: viewport-sized scroll area, not tiny letters. */
+#shell{height:100dvh;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.stage{overflow:visible}
+.topbar{position:sticky;top:0;z-index:10}
+.stage[data-view="longquestion"] .scene{opacity:.14}
+.stage[data-view="longquestion"] .view{min-height:calc(100dvh - 148px)}
+.long-question .brand{width:155px;margin:0 0 15px}
+.long-question .sticky-timer{position:sticky;top:49px;z-index:4;background:#eeeae4ef;backdrop-filter:blur(8px);padding:8px 0 2px;margin:-3px 0 10px}
+.long-question .timertrack{margin:7px 0 8px}
+.long-question .reading-label{font:900 11px/1.4 Arial,sans-serif;color:var(--red);letter-spacing:.14em;text-transform:uppercase;margin:0 0 7px}
+.long-question .long-copy{font:clamp(17px,4.6vw,19px)/1.4 var(--serif);background:#f5f3edeb;border-left:3px solid var(--red);padding:13px 12px;margin:0 0 19px;overflow-wrap:anywhere}
+.long-question .question-title{font-size:clamp(31px,8.3vw,40px);line-height:1.03;margin:5px 0 18px}
+.long-question .option{min-height:51px;padding:10px 13px;margin:0 0 8px;font-size:clamp(15px,4.3vw,17px);background:#f5f4f0f2}
+.long-question .action{position:sticky;bottom:58px;z-index:5;margin-top:17px;box-shadow:0 -7px 18px #eeece6}
+.long-question .small-note{margin:8px 0 0}
+@media(min-width:750px){#shell{height:820px;min-height:0}.stage[data-view="longquestion"] .view{min-height:660px}}
+@media(max-height:720px){.long-question .brand{width:132px;margin-bottom:8px}.long-question .long-copy{font-size:17px;padding:9px 12px}.long-question .option{min-height:48px}}
 </style></head>
 <body><div id="shell"><header class="topbar"><span>вы́Читать на русском</span><span>⋮ &nbsp; ×</span></header>
 <main id="stage" class="stage" data-view="intro">
@@ -103,6 +121,30 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--
 <button class="option" data-value="2"><i></i>Втечение дня</button>
 </div>
 <div class="spacer"></div><button class="action" id="check-answer" disabled>Проверить ответ <b class="arrow">→</b></button><p class="foot">Тестовый вопрос · выбор можно менять</p>
+</section>
+
+<section class="view long-question" data-section="longquestion">
+  <img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+  <div class="sticky-timer">
+    <div class="statusline"><span>ВОПРОС 2 ИЗ 6</span><strong>00:47</strong></div>
+    <div class="timertrack"><b></b></div>
+  </div>
+  <div class="reading-label">Описание</div>
+  <p class="long-copy">Люда перед обедом думала: "Он был единственный человек, понявший мою драму".</p>
+  <div class="reading-label">Вопрос</div>
+  <h2 class="question-title">Куда ставим <em>ударение?</em></h2>
+  <div role="group" aria-label="Шесть вариантов ответа">
+    <button class="option" data-value="long1"><i></i>Вариант ответа 1</button>
+    <button class="option" data-value="long2"><i></i>Вариант ответа 2</button>
+    <button class="option" data-value="long3"><i></i>Вариант ответа 3</button>
+    <button class="option" data-value="long4"><i></i>Вариант ответа 4</button>
+    <button class="option" data-value="long5"><i></i>Вариант ответа 5</button>
+    <button class="option" data-value="long6"><i></i>Вариант ответа 6</button>
+  </div>
+  <p class="small-note">Демонстрационные варианты — здесь будет текст из Google-таблицы.</p>
+  <div class="spacer" style="min-height:12px"></div>
+  <button class="action" id="check-answer-long" disabled>Проверить ответ <b class="arrow">→</b></button>
+  <p class="foot">Дизайн-макет · таймер и ответы демонстрационные</p>
 </section>
 <section class="view" data-section="correct">
 <img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
@@ -154,7 +196,7 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--
 <div class="spacer"></div><div class="ring"></div><h2 class="statstitle" style="text-align:center">Загрузка<br><em>теста…</em></h2><p class="quote" style="text-align:center">Проверяем Telegram и загружаем вопросы.</p><div class="spacer"></div>
 </section>
 </main></div>
-<nav class="view-picker" aria-label="Навигация макета"><label>Макет</label><select id="viewselect" aria-label="Выбрать экран"><option value="intro">01 · Старт</option><option value="question">02 · Вопрос</option><option value="correct">03 · Верно</option><option value="wrong">04 · Неверно</option><option value="timeout">05 · Время вышло</option><option value="result">06 · Итог</option><option value="stats">07 · Статистика</option><option value="share">08 · Поделиться</option><option value="done">09 · Уже пройден</option><option value="loading">10 · Загрузка</option></select><button id="reset">Сначала</button></nav>
+<nav class="view-picker" aria-label="Навигация макета"><label>Макет</label><select id="viewselect" aria-label="Выбрать экран"><option value="intro">01 · Старт</option><option value="question">02 · Вопрос</option><option value="longquestion">02а · Длинный вопрос, 6 вариантов</option><option value="correct">03 · Верно</option><option value="wrong">04 · Неверно</option><option value="timeout">05 · Время вышло</option><option value="result">06 · Итог</option><option value="stats">07 · Статистика</option><option value="share">08 · Поделиться</option><option value="done">09 · Уже пройден</option><option value="loading">10 · Загрузка</option></select><button id="reset">Сначала</button></nav>
 <script>
 (function(){
  var stage=document.getElementById('stage'),picker=document.getElementById('viewselect'),choice=null;
@@ -167,9 +209,10 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--
  picker.addEventListener('change',function(){go(picker.value)});
  document.getElementById('reset').addEventListener('click',function(){choice=null;document.querySelectorAll('.option').forEach(function(x){x.classList.remove('selected')});document.getElementById('check-answer').disabled=true;go('intro')});
  document.querySelectorAll('.option').forEach(function(el){el.addEventListener('click',function(){
-  choice=el.dataset.value;document.querySelectorAll('.option').forEach(function(x){x.classList.remove('selected')});el.classList.add('selected');document.getElementById('check-answer').disabled=false;
+  choice=el.dataset.value;document.querySelectorAll('.option').forEach(function(x){x.classList.remove('selected')});el.classList.add('selected');document.getElementById('check-answer').disabled=false;document.getElementById('check-answer-long').disabled=false;
  })});
  document.getElementById('check-answer').addEventListener('click',function(){go(choice==='1'?'correct':'wrong')});
+ document.getElementById('check-answer-long').addEventListener('click',function(){go('correct')});
  var rows=document.getElementById('stats-rows'),numbers=[62,71,54,37,68,45];
  numbers.forEach(function(v,i){var row=document.createElement('div');row.className='statsrow';
   var label=document.createElement('div');label.className='statslabel';
