@@ -124,3 +124,92 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   z-index:5;
   pointer-events:auto;
 }
+
+/* FINAL APPROVED SHARE POSTER — ORIGINAL 8-SCREEN REFERENCE */
+/* Scope: share screen only. Background is a faithful crop of the approved
+   visual mock; the score remains a true HTML value, and the send/back buttons
+   remain interactive Telegram controls. */
+.page[data-screen="share-screen"]{
+  background:#eeeae3;
+  padding-top:14px;
+}
+.page[data-screen="share-screen"] .share-card{
+  position:relative;
+  display:block;
+  width:100%;
+  min-height:0;
+  aspect-ratio:822/1143;
+  padding:0;
+  margin:0;
+  border:0;
+  box-shadow:none;
+  overflow:hidden;
+  background:#e8e3db url('./share-approved-poster.webp') center top/100% 100% no-repeat;
+}
+.page[data-screen="share-screen"] .share-card::after{
+  content:none!important;
+  display:none!important;
+}
+.page[data-screen="share-screen"] .card-logo,
+.page[data-screen="share-screen"] .share-card h1,
+.page[data-screen="share-screen"] .share-card p{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.page[data-screen="share-screen"] .share-card .big-result{
+  position:absolute;
+  top:43.5%;
+  left:3%;
+  width:51%;
+  height:22%;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  padding:0 3px;
+  background:#ebe6dd;
+  color:#b3211f;
+  font-family:Oswald,'Arial Narrow',Impact,sans-serif;
+  font-size:clamp(69px,22vw,107px);
+  font-weight:700;
+  letter-spacing:-.05em;
+  line-height:1;
+  white-space:nowrap;
+}
+.page[data-screen="share-screen"] .share-card .big-result small{
+  color:#b3211f;
+  font-size:.38em;
+  letter-spacing:-.025em;
+}
+.page[data-screen="share-screen"] #share-send-btn{
+  width:100%;
+  margin-top:14px;
+  background:#171717;
+  color:#fff;
+  border:0;
+  justify-content:center;
+  gap:8px;
+  min-height:54px;
+  font-size:18px;
+}
+.page[data-screen="share-screen"] #share-back-btn{
+  border:0;
+  background:transparent;
+  color:#444;
+  font-family:Georgia,serif;
+  font-size:13px;
+  min-height:34px;
+  margin-top:8px;
+}
+@media(max-width:350px){
+  .page[data-screen="share-screen"] .share-card .big-result{
+    font-size:clamp(62px,20vw,81px);
+  }
+}
