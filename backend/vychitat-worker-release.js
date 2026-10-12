@@ -430,6 +430,9 @@ async function adminAction(env,body) {
       const hook = await telegram(env,'getWebhookInfo',{});
       const placeholders = run.questions.filter(q=>[q.description,q.text,...q.options,q.explanation]
         .some(x=>PLACEHOLDER_PATTERN.test(String(x||''))));
+      const names=await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('mini_stats_snapshots','mini_stats_deliveries')").all();
+      const statsTablesReady=new Set((names.results||[]).map(x=>x.name)).size===2;
       const globalMenu = await telegram(env,'getChatMenuButton',{});
       const privateMenu = env.TEST_CHAT_ID
         ? await telegram(env,'getChatMenuButton',{chat_id:Number(env.TEST_CHAT_ID)})
@@ -440,7 +443,7 @@ async function adminAction(env,body) {
         accessMode:String(env.ACCESS_MODE||'pilot').toLowerCase(),
         invitationsEnabled:env.INVITES_ENABLED==='yes',weeklyEnabled:env.WEEKLY_ENABLED==='yes',
         questionCount:run.questions.length,placeholderCount:placeholders.length,
-        statsPushEnabled:env.STATS_PUSH_ENABLED==='yes',
+        statsPushEnabled:env.STATS_PUSH_ENABLED==='yes',statsTablesReady,
         readyForPublic:draftIsReady(run.questions),
         globalMenuReady:globalMenu?.type==='web_app'&&globalMenu?.web_app?.url===BASE_PAGE,
         privateMenuReady:privateMenu?.type==='web_app'&&privateMenu?.web_app?.url===BASE_PAGE};
