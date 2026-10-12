@@ -65,7 +65,7 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
     repeating-linear-gradient(114deg,rgba(94,75,54,.017) 0 1px,transparent 1px 7px);
 }
 .page[data-screen="completed-screen"] .scene-art{
-  background-image:url('./completed-landscape.webp');
+  background-image:url('./completed-landscape-soft.webp');
   background-size:100% auto;
   background-repeat:no-repeat;
   background-position:center bottom;
@@ -79,23 +79,23 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   right:0;
   bottom:auto;
   left:auto;
-  width:24%;
-  height:56%;
+  width:15%;
+  height:55%;
   z-index:1;
-  background:url('./completed-birch.webp') right top/100% 100% no-repeat;
+  background:url('./completed-birch-clean.webp') right top/100% 100% no-repeat;
   pointer-events:none;
 }
 .page[data-screen="completed-screen"] .scene-art::after{
   content:"";
   position:absolute;
-  top:17%;
-  right:9%;
+  top:9%;
+  right:7%;
   bottom:auto;
   left:auto;
-  width:25%;
+  width:26%;
   aspect-ratio:224 / 240;
   z-index:2;
-  background:url('./completed-bird.webp') center/100% 100% no-repeat;
+  background:url('./completed-bird-opaque.webp') center/100% 100% no-repeat;
   pointer-events:none;
 }
 .page[data-screen="completed-screen"] #completed-screen{
