@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>вы́Читать — новый дизайн Mini App (макет)</title>
+<meta name="theme-color" content="#e8e6e0"><meta name="robots" content="noindex">
+<style>
+:root{--paper:#eeece6;--ink:#151516;--red:#be211f;--ash:#646260;--line:#aaa8a2;--display:Impact,"Arial Narrow","Roboto Condensed","Arial Black",sans-serif;--serif:Georgia,"Times New Roman",serif}
+*{box-sizing:border-box}html{min-height:100%;background:#292929}body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;color:var(--ink)}
+button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+#shell{max-width:450px;min-height:100svh;margin:auto;background:var(--paper);position:relative;overflow:hidden;box-shadow:0 0 52px #0008}
+.topbar{height:49px;display:flex;align-items:center;justify-content:space-between;background:#fafafa;padding:0 17px;font-size:13px;font-weight:700;position:relative;z-index:4;border-bottom:1px solid #d5d3d0}
+.topbar span:last-child{font-weight:400;color:#585858;font-size:15px}
+.stage{position:relative;isolation:isolate;min-height:calc(100svh - 49px);padding:19px 25px 78px;overflow:hidden}
+.stage:before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(ellipse at 22% 12%,#fff9,transparent 65%),repeating-linear-gradient(104deg,#00000005 0 1px,transparent 1px 6px),var(--paper)}
+/* Decoration is inline vector graphics, not a full-screen bitmap: screen labels stay readable. */
+.scene{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.stage[data-view="question"] .scene,.stage[data-view="correct"] .scene,.stage[data-view="wrong"] .scene,.stage[data-view="timeout"] .scene{opacity:.52}
+.stage[data-view="stats"] .scene{opacity:.2}
+.stage[data-view="result"] .scene,.stage[data-view="done"] .scene{opacity:.65}
+.brand{width:min(230px,78%);height:auto;display:block;margin:2px 0 28px;object-fit:contain;mix-blend-mode:multiply}
+.stage[data-view="question"] .brand,.stage[data-view="correct"] .brand,.stage[data-view="wrong"] .brand,.stage[data-view="timeout"] .brand{width:170px;margin-bottom:26px}
+.view{display:none;min-height:calc(100svh - 148px);flex-direction:column;gap:0;position:relative}.view.active{display:flex}
+.eyebrow{font-family:Arial,sans-serif;color:var(--red);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;line-height:1.4}
+.rule{height:3px;width:60px;background:var(--red);margin:11px 0 17px}
+.display{font-family:var(--display);font-stretch:condensed;letter-spacing:-.018em;font-weight:900;text-transform:uppercase;line-height:.94;margin:0}
+.hero-title{font-size:clamp(52px,15vw,78px);margin:8px 0 18px;letter-spacing:-.024em}
+.hero-title span{display:block}.lead{font:21px/1.32 var(--serif);max-width:265px;margin:12px 0 0}
+.small-note{font:12px/1.5 Arial,sans-serif;color:#666;margin:11px 0 0}
+.spacer{flex:1;min-height:48px}
+.action{display:flex;width:100%;min-height:60px;align-items:center;justify-content:center;gap:12px;padding:14px;background:var(--ink);border:1px solid var(--ink);color:#fff;font:25px/.95 var(--display);text-transform:uppercase;letter-spacing:.045em;position:relative;margin-top:20px;box-shadow:5px 5px 0 #dedbd5}
+.action.red{background:var(--red);border-color:var(--red)}.action.pale{background:#eeece7;color:var(--ink);border-color:#454442;box-shadow:none}
+.arrow{position:absolute;right:16px;font:27px Arial}
+.foot{font:11px Arial;color:#5b5651;text-align:center;margin:17px 0 0;position:relative}
+.statusline{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:bold}.statusline strong{font-family:var(--display);font-size:19px}
+.timertrack{height:7px;background:#bdbab4;margin:9px 0 23px}.timertrack b{display:block;height:100%;width:64%;background:var(--red)}
+.question-title{font:clamp(37px,10.5vw,52px)/1 var(--display);max-width:345px;margin:15px 0 29px}
+.question-title em{color:var(--red);font-style:normal}
+.option{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;background:#f5f4efeb;border:1px solid #787673;padding:9px 14px;text-align:left;margin:0 0 10px;font-size:17px;font-weight:600}
+.option i{width:21px;height:21px;flex:none;border:2px solid #565452;border-radius:50%;display:grid;place-items:center}
+.option.selected{background:var(--red);color:#fff;border-color:var(--red)}.option.selected i{border-color:#fff}.option.selected i:after{content:"";background:#fff;width:9px;height:9px;border-radius:50%}
+.feedback-title{font:clamp(65px,17vw,91px)/1 var(--display);margin:22px 0 22px;color:var(--red)}
+.feedback-title.dark{color:var(--ink)}.feedback-description{font:21px/1.4 var(--serif);max-width:340px;background:#eeece9e0;padding:14px 12px;border-left:3px solid var(--red)}
+.ornament{font-size:70px;color:var(--red);line-height:1;margin-top:40px;text-align:right;font-family:var(--serif)}
+.scoreheader{font:clamp(42px,12vw,63px)/.98 var(--display);margin:17px 0 22px;text-transform:uppercase}
+.scorebig{font:clamp(88px,23vw,124px)/.95 var(--display);color:var(--red);letter-spacing:-.04em}.scorebig small{font-size:34px;color:var(--ink);letter-spacing:0}
+.info{background:#f4f2eded;border-left:4px solid var(--red);padding:16px 17px;margin:21px 0 12px;font:15px/1.45 var(--serif)}
+.statsrow{margin-bottom:20px}.statslabel{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:700;margin-bottom:8px}.statslabel span{font-weight:400}.bar{height:13px;background:#b3b1ad;overflow:hidden}.bar b{display:block;background:var(--red);height:100%}
+.statstitle{font:clamp(39px,11vw,59px)/1 var(--display);text-transform:uppercase;margin:14px 0 12px}.statstitle em{color:var(--red);font-style:normal}
+.quote{font:17px/1.45 var(--serif);margin:12px 0 25px}
+.plate{padding:14px;border:1px solid #9f9b95;background:#eeece6e3;margin:9px 0 16px}
+.sharecard{border:2px solid var(--ink);background:#e6e3ddf4;padding:23px 18px;min-height:310px}
+.sharecard .brand{width:150px;margin-bottom:20px}.sharecard h2{font:65px/.95 var(--display);text-transform:uppercase;margin:0 0 18px}.sharecard h2 span{color:var(--red)}
+.sharecard .scorebig{font-size:78px}.sharecard p{font:16px/1.4 var(--serif)}
+.ring{width:110px;height:110px;border:9px solid #bdbab4;border-top-color:var(--red);border-radius:50%;margin:70px auto 20px;animation:spin 1.5s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.view-picker{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:6px;max-width:min(440px,calc(100vw - 20px));padding:7px 9px;border-radius:50px;background:#171717;color:white;box-shadow:0 4px 18px #0005}
+.view-picker label{font-size:10px;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;font-weight:bold}
+.view-picker select{font-size:12px;padding:7px 9px;border:0;background:#343434;color:white;max-width:190px;border-radius:30px}
+.view-picker button{background:#c82722;color:white;border:0;border-radius:25px;padding:8px;font-size:12px;white-space:nowrap}
+@media(min-width:750px){body{padding:35px 0}.stage{min-height:760px}.view{min-height:640px}#shell{min-height:820px;border:8px solid #1d1d1d;border-radius:26px}.view-picker{bottom:22px}}
+@media(max-width:350px){.stage{padding-left:17px;padding-right:17px}.hero-title{font-size:49px}.question-title{font-size:34px}.view-picker label{display:none}}
+@media(prefers-reduced-motion:reduce){.ring{animation:none}}
+</style></head>
+<body><div id="shell"><header class="topbar"><span>вы́Читать на русском</span><span>⋮ &nbsp; ×</span></header>
+<main id="stage" class="stage" data-view="intro">
+<svg class="scene" viewBox="0 0 420 780" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs>
+ <pattern id="grain" width="23" height="37" patternUnits="userSpaceOnUse"><path d="M1 3h1 M12 27h2 M4 18h1" stroke="#999" opacity=".29"/></pattern>
+ <g id="spruce" fill="#1c1c1c"><path d="M0 0l-14 27 6-2-18 27 7-2-19 31h76L19 50l8 2L8 25l6 2Z"/><rect x="-4" y="70" width="8" height="23"/></g>
+ <g id="birch"><path d="M0 0l14 0-2 800H3z" fill="#f8f6ee" stroke="#383b3c" stroke-width="2"/><path d="M0 55l13-6m-11 70 10 6M0 170l13-7m-11 68 10 4M0 335l14-9m-12 100 10 9M0 517l13-6m-11 74 11 7" stroke="#18191b" stroke-width="7"/></g>
+ <g id="raven" fill="#19191a"><path d="M-48 16C-19-5-12-21 2-14 19-20 21-7 39-12L12-1 48 8 13 11 0 28-7 7z"/></g>
+</defs>
+<circle cx="327" cy="165" r="106" fill="#be211f" opacity=".96"/>
+<g transform="translate(320 151) scale(1.25) rotate(13)"><use href="#raven"/></g>
+<path d="M0 710C95 675 125 705 201 674s158-15 219-60V780H0Z" fill="#d8d5ce"/>
+<!-- The Kremlin ensemble is anchored by a continuous wall and ground. No floating towers. -->
+<g fill="#2e2f30">
+<path d="M175 661H420v79H175Z"/>
+<path d="M175 655l10-6 10 6 9-6 11 6 10-6 10 6 10-6 10 6 9-6 10 6 10-6 10 6 9-6 10 6 10-6 10 6 9-6 10 6 10-6 10 6 10-6 10 6V680H175Z"/>
+<path d="M285 654V525h55v129Z"/><path d="M280 528l32-76 34 76Z"/><path d="M306 464l6-31 6 31Z"/><path d="M308 433l4-14 4 14Z"/><circle cx="312" cy="550" r="12" fill="#e9e7e0"/>
+<path d="M215 661v-70h26v70Z"/><path d="M211 590l17-47 17 47Z"/><path d="M240 662v-51h26v51Z"/><path d="M238 612l15-34 15 34Z"/>
+<path d="M362 655v-76h26v76Z"/><path d="M359 579l16-42 16 42Z"/>
+</g>
+<g opacity=".85"><use href="#spruce" transform="translate(33 684) scale(1.35)"/><use href="#spruce" transform="translate(82 710) scale(.87)"/><use href="#spruce" transform="translate(118 716) scale(.7)"/><use href="#spruce" transform="translate(383 710) scale(.8)"/></g>
+<path d="M0 740q82-15 143 8t129 0 148-11" stroke="#fff" stroke-width="7" fill="none"/>
+<use href="#birch" transform="translate(8 -27) rotate(2)"/><use href="#birch" transform="translate(402 -34) rotate(-3)"/>
+<g stroke="#ae1e1b" stroke-width="4" fill="none"><path d="M18 180q30 43 5 85m372 5q-31 34-12 78"/><path d="m23 200 16 11m-13 3-19 4m386 68-17 9m12 18 18 9"/></g>
+<path d="M0 775L110 780 0 645Z" fill="#b6201f"/><path d="M0 775l54-9L0 710m0 35 25-8" fill="none" stroke="#eee9e1" stroke-width="8"/>
+<rect width="420" height="780" fill="url(#grain)" opacity=".4"/>
+</svg>
+<section class="view active" data-section="intro">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Мини-тест по русскому языку</div><div class="rule"></div>
+<h1 class="display hero-title"><span>Русский</span><span>на практике</span></h1>
+<p class="lead">Шесть вопросов.<br>Одна попытка.<br>У каждого вопроса свой таймер.</p>
+<div class="spacer"></div><button class="action" data-go="question">Открыть тест <b class="arrow">→</b></button><p class="foot">Дизайн-макет · ответы не сохраняются</p>
+</section>
+<section class="view" data-section="question">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="statusline"><span>ВОПРОС 2 ИЗ 6</span><strong>00:47</strong></div><div class="timertrack"><b></b></div>
+<div class="eyebrow">Выбери один вариант</div><h2 class="question-title">Как правильно <em>написать</em>?</h2>
+<div role="group" aria-label="Варианты ответа">
+<button class="option" data-value="0"><i></i>В течении дня</button>
+<button class="option" data-value="1"><i></i>В течение дня</button>
+<button class="option" data-value="2"><i></i>Втечение дня</button>
+</div>
+<div class="spacer"></div><button class="action" id="check-answer" disabled>Проверить ответ <b class="arrow">→</b></button><p class="foot">Тестовый вопрос · выбор можно менять</p>
+</section>
+<section class="view" data-section="correct">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Вопрос 2 из 6 · проверено</div><h2 class="feedback-title">Верно!</h2>
+<p class="feedback-description">Правильно: <strong>в течение дня</strong>. Предлог со значением времени пишется раздельно, на конце — «е».</p>
+<div class="ornament">✳</div><div class="spacer"></div><button class="action red" data-go="question">Следующий вопрос <b class="arrow">→</b></button>
+</section>
+<section class="view" data-section="wrong">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Вопрос 2 из 6 · проверено</div><h2 class="feedback-title dark">Мимо!</h2>
+<p class="feedback-description">Правильно: <strong>в течение дня</strong>. Когда речь о времени, это составной предлог, а не существительное.</p>
+<div class="ornament">✳</div><div class="spacer"></div><button class="action red" data-go="result">Посмотреть итог <b class="arrow">→</b></button>
+</section>
+<section class="view" data-section="timeout">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Вопрос 2 из 6 · время истекло</div><h2 class="feedback-title dark">Время!</h2>
+<p class="feedback-description">Таймер остановился. Ответ не засчитан. Правильный вариант: <strong>в течение дня</strong>.</p>
+<div class="spacer"></div><button class="action red" data-go="result">Дальше <b class="arrow">→</b></button>
+</section>
+<section class="view" data-section="result">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Все вы́читано</div><h2 class="scoreheader">Вот и<br>результат.</h2>
+<div class="scorebig">2 <small>из 6</small></div>
+<p class="lead">Между тобой и русским языком есть искра. Пока в основном от трения.</p>
+<div class="info">Подписка на вы́Читать подтверждена. Общая статистика откроется после 19:00 МСК.</div>
+<div class="spacer"></div><button class="action" data-go="stats">Как справились остальные? <b class="arrow">→</b></button>
+<button class="action pale" data-go="share">Поделиться результатом ↗</button>
+</section>
+<section class="view" data-section="stats">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Статистика после 19:00 МСК</div><h2 class="statstitle">Как справились<br><em>остальные?</em></h2>
+<p class="quote">Пример отображения. Только проценты — без количества участников.</p>
+<div id="stats-rows"></div>
+<div class="spacer"></div><button class="action" data-go="result">Вернуться к результату <b class="arrow">←</b></button>
+</section>
+<section class="view" data-section="share">
+<div class="eyebrow">Карточка для пересылки</div><div class="rule"></div>
+<div class="sharecard"><img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать"><div class="eyebrow">Тест по русскому языку</div><h2>Мой<br><span>результат</span></h2><div class="scorebig">2 <small>из 6</small></div><p>Проверь, хорошо ли ты знаешь русский язык. Канал «вы́Читать».</p></div>
+<div class="spacer"></div><button class="action" data-go="result">Назад к результату <b class="arrow">←</b></button>
+</section>
+<section class="view" data-section="done">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="eyebrow">Одна попытка на выпуск</div><h2 class="statstitle">Этот выпуск<br><em>уже пройден.</em></h2>
+<p class="lead">Все шесть ответов сохранены. Вернуться к результату можно в любой момент.</p>
+<div class="spacer"></div><button class="action" data-go="result">Посмотреть результат <b class="arrow">→</b></button>
+</section>
+<section class="view" data-section="loading">
+<img class="brand" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQEAAABeCAMAAAAUnVFZAAAAYFBMVEX///8AAAD+/v66urpERER2dnaHh4cSEhLa2tpXV1eZmZk1NTVmZmYkJCTu7u7MzMyqqqrk5OT5+fn39/fz8/MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJl6VZAAAAIHRSTlMA/////////////////63///83T3MAAAAAAAAAAAAAAMZ4TnEAAAQ2SURBVHja7dzpYuIgEABgZrkhl9r3f9Y1h5ZcQCOhQDq/1jSr8kkGQgCE/uIv/OOfGZcu/PUY/tliOufRKip1zQGA11pLqtrHFYo/xh1TDRuhKb5fofxYgiVk3gju4t8oB0dweiu3/EKCV0hRJoBv+TM1cFcACj8K+lUYAK7hh1HjogAoHAh6L6b8Nw2HQotSrgAOB4PjIgAUfBCqAAAGHwW9Zg7MieB0gNQJTs0BOeQCZysAQQJnCyAgUIhcBepQAvVXngAVBIvqykkg4VQQ7RoY+sdf+QFQCBo0OwEBgUPkVgVkaAF59SqQXCWIXgWSqwSuUSGA0itB3IYgwebAdRHwYMU2ehX8no9AuO4gb4xRxi4fgXB5sEWokWYuFLiPKSW0w4smwYsgGMAwONK+Xz4QGocd2fg9yK/dM8S6CIbcp7h5f5SHQKiWgAwAc5E8BHQggf6Z0UxT5yIQriVQi1GWRyICDoAWTos2DwF1noDKQ+CncyW+QxpHiDFK2L+uxlTIzHFDQ4D1MVp0/T+fKUQxI8aHDrh6Niy8agUbz1meYrxLxP7Q+jn78CF0MUiIxz4RMx8qGwLfVQO/DpJVu/J+z2o6Z3mKWcHiNQWz/9twq4BG3et+gRDCYUNA8F2BajX8epJAfUDg2dkdp5wSq0CNGr49jvz+7hr2BBjEEuAHBJ7l5cItwDfKMRegsCfwstNEny0AxwSgrwXDTzh8iCLkVdG/BWCjLs8EusUDBvLOAdOfeH+D2XHjHOOU8V0q9/3WCQLP8rL3LYX5WYwvBZCSuwKC7wtQ4wdmNoFXtmyiCry6Enwp0Jd8IfC6RxartsCYsb0WIMYbNB4CfR88voCgK4HnN1wLILTZGg5+1EMA+QhYEsIJmRBTym59HmBGHqBTjZ1lQpvAAIB3BKQx3IodeYCBcTBOa9j/cHRYgFEbbcFUdLM1dAlotCcwlaq/uhttE2CLgz8n0AcFqmEFCjEE2jGHmz0ihwAXuwLTQxytsKrBJaA/EpDH2gJ6mwlgytqJwuwVOwQ6tCuw04yuBQibMmp1VIAez4Ro6LfMP6w2BKhDoEIWgVV30pUJ8VEB9YlAtUz4ldkaKruAbmwCqH0TaB8BdbhL1B4X6Mi8yRNKz/qErVWAt8gqgJpqo73YFuASf9AvPm+E5OMVeUIxpkI8gIwzUroeOs3lmRE9SyClZ6fxZpGlOqPsdxLBIxsBeQ5AWrNIfuMy6PIRCDiDAhKdQeEiKH8WjUvgAjOpXATlz6ZzCYgLVIHYlSC9KuAgEBeoAnGbg0TX3F17hYWToPxVNk6C4ldaRbwO6pS35Lj2istYqSD1fRguvfLaTVD86nu3Ab0EgJWAXQLASlD6TiweBqXvxuNBUPqOTD4Ghe/K5WNQ+s5sPgaF787ng1D4Do1eCIXv0ulgGA+VvVOrX9xz3633P9d1Ref3k79XAAAAAElFTkSuQmCC" alt="Логотип вы́Читать">
+<div class="spacer"></div><div class="ring"></div><h2 class="statstitle" style="text-align:center">Загрузка<br><em>теста…</em></h2><p class="quote" style="text-align:center">Проверяем Telegram и загружаем вопросы.</p><div class="spacer"></div>
+</section>
+</main></div>
+<nav class="view-picker" aria-label="Навигация макета"><label>Макет</label><select id="viewselect" aria-label="Выбрать экран"><option value="intro">01 · Старт</option><option value="question">02 · Вопрос</option><option value="correct">03 · Верно</option><option value="wrong">04 · Неверно</option><option value="timeout">05 · Время вышло</option><option value="result">06 · Итог</option><option value="stats">07 · Статистика</option><option value="share">08 · Поделиться</option><option value="done">09 · Уже пройден</option><option value="loading">10 · Загрузка</option></select><button id="reset">Сначала</button></nav>
+<script>
+(function(){
+ var stage=document.getElementById('stage'),picker=document.getElementById('viewselect'),choice=null;
+ function go(id){
+  stage.dataset.view=id;
+  document.querySelectorAll('[data-section]').forEach(function(s){s.classList.toggle('active',s.dataset.section===id)});
+  picker.value=id; window.scrollTo({top:0,behavior:'instant'});
+ }
+ document.querySelectorAll('[data-go]').forEach(function(el){el.addEventListener('click',function(){go(el.dataset.go)})});
+ picker.addEventListener('change',function(){go(picker.value)});
+ document.getElementById('reset').addEventListener('click',function(){choice=null;document.querySelectorAll('.option').forEach(function(x){x.classList.remove('selected')});document.getElementById('check-answer').disabled=true;go('intro')});
+ document.querySelectorAll('.option').forEach(function(el){el.addEventListener('click',function(){
+  choice=el.dataset.value;document.querySelectorAll('.option').forEach(function(x){x.classList.remove('selected')});el.classList.add('selected');document.getElementById('check-answer').disabled=false;
+ })});
+ document.getElementById('check-answer').addEventListener('click',function(){go(choice==='1'?'correct':'wrong')});
+ var rows=document.getElementById('stats-rows'),numbers=[62,71,54,37,68,45];
+ numbers.forEach(function(v,i){var row=document.createElement('div');row.className='statsrow';
+  var label=document.createElement('div');label.className='statslabel';
+  var a=document.createElement('strong');a.textContent='Вопрос '+(i+1);var b=document.createElement('span');b.textContent='Верно '+v+'% · Ошибки '+(100-v)+'%';
+  label.append(a,b);var bar=document.createElement('div');bar.className='bar';var fill=document.createElement('b');fill.style.width=v+'%';bar.append(fill);row.append(label,bar);rows.append(row)
+ });
+ var current=new URLSearchParams(location.search).get('screen');
+ if(current && document.querySelector('[data-section="'+current+'"]'))go(current);
+})();
+</script></body></html>
