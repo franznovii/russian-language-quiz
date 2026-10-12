@@ -52,3 +52,81 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
 .page .bot-footer,
 .page .app-footer,
 .page [data-footer-handle] {display:none!important}
+
+
+/* APPROVED COMPLETED SCREEN 2026-10-12
+   Dynamic text and button remain accessible/live. Only text-free art crops
+   from the user's approved poster are used as decoration. Other screens
+   are intentionally untouched. */
+.page[data-screen="completed-screen"]{
+  background-color:#efeae2;
+  background-image:
+    radial-gradient(ellipse at 26% 17%,rgba(255,253,247,.32),transparent 53%),
+    repeating-linear-gradient(114deg,rgba(94,75,54,.017) 0 1px,transparent 1px 7px);
+}
+.page[data-screen="completed-screen"] .scene-art{
+  background-image:url('./completed-landscape.webp');
+  background-size:100% auto;
+  background-repeat:no-repeat;
+  background-position:center bottom;
+  -webkit-mask-image:none;
+  mask-image:none;
+}
+.page[data-screen="completed-screen"] .scene-art::before{
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  bottom:auto;
+  left:auto;
+  width:24%;
+  height:56%;
+  z-index:1;
+  background:url('./completed-birch.webp') right top/100% 100% no-repeat;
+  pointer-events:none;
+}
+.page[data-screen="completed-screen"] .scene-art::after{
+  content:"";
+  position:absolute;
+  top:17%;
+  right:9%;
+  bottom:auto;
+  left:auto;
+  width:25%;
+  aspect-ratio:224 / 240;
+  z-index:2;
+  background:url('./completed-bird.webp') center/100% 100% no-repeat;
+  pointer-events:none;
+}
+.page[data-screen="completed-screen"] #completed-screen{
+  min-height:calc(100svh - 76px);
+  padding-top:24px;
+}
+.page[data-screen="completed-screen"] #completed-screen h1{
+  font-size:clamp(38px,10.8vw,51px);
+  line-height:1.08;
+  letter-spacing:-.032em;
+  margin:8px 0 17px;
+  max-width:97%;
+}
+.page[data-screen="completed-screen"] #completed-screen .lead{
+  font-size:clamp(15px,4.1vw,18px);
+  line-height:1.38;
+  max-width:87%;
+  margin:0 0 20px;
+}
+.page[data-screen="completed-screen"] #completed-result-btn{
+  background:#dbd8d1;
+  color:var(--ink);
+  border:1px solid #a6a198;
+  min-height:54px;
+  font-size:18px;
+  margin-top:13px;
+  justify-content:space-between;
+  padding:13px 15px;
+}
+@media(max-width:350px){
+  .page[data-screen="completed-screen"] #completed-screen h1{font-size:36px}
+  .page[data-screen="completed-screen"] #completed-screen .lead{max-width:96%}
+  .page[data-screen="completed-screen"] .scene-art::after{right:5%;width:26%}
+}
