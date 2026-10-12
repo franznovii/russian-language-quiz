@@ -180,6 +180,13 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 /* Timer ink is driven by the displayed value as a defense against stale screen state. */
 #timer-chip.time-chip.urgent,
 #timer-chip.time-chip.expired{color:#c02621!important}
+
+/* The completed-run state is a distinct screen, not a redirect to results. */
+.page:has(#done-screen:not([hidden])) .scene-art{opacity:.23}
+#done-screen{padding-top:27px;min-height:calc(100svh - 155px)}
+#done-screen h1{font-size:clamp(48px,12.5vw,68px);margin-bottom:9px}
+#done-screen h1 .hero-accent{color:var(--accent)}
+#done-screen .lead{font:clamp(18px,5vw,23px)/1.35 Georgia,serif}
 </style>
 <style>
 .reviewer{position:fixed;z-index:100;bottom:9px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#171717;border:1px solid #555;color:#fff;padding:8px 12px;max-width:calc(100vw - 16px);border-radius:25px;box-shadow:0 4px 18px #0005}
@@ -276,6 +283,16 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
       <button id="share-result-btn" class="share-mini-btn" type="button">Поделиться результатом ↗</button>
       <div class="notice">Твои ответы сохранены. Повторно пройти этот же выпуск нельзя.</div>
     </section>
+
+    <section class="mini-screen" id="done-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Выпуск завершён</div>
+      <h1>УЖЕ<br><span class="hero-accent">ПРОЙДЕНО.</span></h1>
+      <div class="big-result"><span id="done-score">2</span> <small>из 6</small></div>
+      <p class="lead">Ты уже прошёл этот тест. Твои ответы сохранены, повторной попытки нет.</p>
+      <div class="notice">Общая статистика доступна после 19:00 МСК участникам, завершившим тест и подписанным на канал.</div>
+      <button id="done-share-btn" class="share-mini-btn" type="button">Поделиться результатом ↗</button>
+    </section>
+
   </main>
   <footer class="site-footer"><span>вы́Читать © 2026</span><span>Тест по русскому языку</span></footer>
 </div>
@@ -296,7 +313,7 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 <script>
 "use strict";
 const el = id => document.getElementById(id);
-const screens=["connect-screen","intro-screen","question-screen","finish-screen"];
+const screens=["connect-screen","intro-screen","question-screen","finish-screen","done-screen"];
 const notes = ["Один верный ответ","Выбери все правильные","Таймер можно проверить","Сложный вопрос с вариантами","До 10 ответов","Последний вопрос"];
 const items=[
  {text:"Куда ставим ударение?", description:'Люда перед обедом думала: "Он был единственный человек, понявший мою драму".',options:["Вариант ответа 1","Вариант ответа 2","Вариант ответа 3","Вариант ответа 4","Вариант ответа 5","Вариант ответа 6"],correct:[1]},
@@ -368,6 +385,7 @@ el("connect-btn").addEventListener("click",()=>{visible("intro");updateSelector(
 el("begin-btn").addEventListener("click",()=>showMockQuestion(0));
 el("answer-btn").addEventListener("click",checkMock);
 el("share-result-btn").addEventListener("click",()=>{el("question-status").textContent="Реальная отправка доступна в Telegram-версии.";alert("Дизайн-макет: в Telegram эта кнопка отправляет настоящий результат.")});
+el("done-share-btn").addEventListener("click",()=>el("share-result-btn").click());
 el("design-switch").addEventListener("change",e=>{
  const mode=e.target.value;
  if(mode==="intro"||mode==="connect"){visible(mode);return}
@@ -378,7 +396,7 @@ el("design-switch").addEventListener("change",e=>{
  if(mode==="timeout"){showMockQuestion(0);selected.clear();feedback=true;el("timer-chip").textContent="00:00";el("timer-chip").classList.add("urgent","expired");el("timer-track").classList.add("urgent");el("timer-fill").style.width="0%";updateSelector("timeout");const ex=el("explanation");ex.hidden=false;ex.classList.add("wrong");ex.replaceChildren();const title=document.createElement("strong");title.textContent="Время вышло!";const p=document.createElement("p");p.textContent="Ответ не засчитан. Дальше — следующий вопрос.";ex.append(title,p);el("answer-btn").disabled=false;el("answer-btn").firstChild.textContent="Следующий вопрос ";return}
  if(mode==="stats"||mode==="result"){corrects=2;showResult(mode);return}
  if(mode==="loading"){visible("connect");el("connect-status").textContent="Проверяем Telegram и загружаем вопросы…";updateSelector("loading");return}
- if(mode==="done"){corrects=2;showResult("result");el("result-joke").textContent="Этот выпуск уже пройден. Твои ответы сохранены.";return}
+ if(mode==="done"){corrects=2;visible("done");el("done-score").textContent=String(corrects);updateSelector("done");return}
 });
 el("design-switch").value="connect";
 </script>
