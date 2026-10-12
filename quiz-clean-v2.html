@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,follow">
+  <meta name="theme-color" content="#eeeae3">
+  <title>вы́Читать — проверка исправленного дизайна</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./assets/quiz-design.css?v=20261012-clean2">
+
+<style>
+/* DESIGN REVISION 2: clean controls. Screenshots of the original art included
+   a tiny printed bot handle in the lower visual border. Cover ONLY that strip. */
+.page .site-footer{display:none!important}
+.page[data-screen="intro-screen"] .scene-art::before,
+.page[data-screen="connect-screen"] .scene-art::before,
+.page[data-screen="completed-screen"] .scene-art::before{
+  content:"";position:absolute;z-index:1;left:0;right:0;bottom:0;
+  height:clamp(55px,9vh,74px);pointer-events:none;
+  background:linear-gradient(to bottom,rgba(238,234,227,0),#eeeae3 50%,#eeeae3);
+}
+</style>
+</head>
+<body>
+<div class="page" data-screen="connect-screen">
+  <header class="site-header"><img class="logo-img" src="./assets/vychitat-logo.png" alt="вы́Читать" width="212" height="100"></header>
+<div class="scene-art" aria-hidden="true"></div>
+
+  <main>
+    <section class="mini-screen" id="connect-screen">
+      <div class="eyebrow"><span class="eyebrow-line"></span> Мини-тест по русскому языку</div>
+      <h1>Русский<br><span class="hero-accent">на практике.</span></h1>
+      <p class="lead">Шесть вопросов,<br>чтобы проверить себя<br>и вспомнить главное.</p>
+      <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
+      <p class="resume">На вопрос по умолчанию даётся 60 секунд. Время может отличаться для разных заданий. Таймер не останавливается при закрытии приложения.</p>
+      <button class="primary-btn" id="connect-btn" type="button">Открыть тест <span aria-hidden="true">→</span></button>
+      <div class="loader" id="connect-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="intro-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
+      <h1 class="intro-title">Русский<br>на практике</h1>
+      <p class="lead" id="intro-greeting"></p>
+      <div class="intro-facts"><span>6 вопросов</span><span>Таймер на вопрос</span><span>Одна попытка</span></div>
+      <p class="resume" id="resume-text"></p>
+      <button class="primary-btn" id="begin-btn" type="button">Начать <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="mini-screen" id="question-screen" hidden>
+      <div class="quiz-head"><span id="question-count">Вопрос 1/6</span><span id="timer-chip" class="time-chip" role="timer" aria-label="Осталось времени">01:00</span></div>
+      <div class="test-label" id="question-type">ОДИН ОТВЕТ</div>
+      <div class="quiz-progress"><div id="progress"></div></div>
+      <div class="timer-track" id="timer-track"><div id="timer-fill"></div></div>
+      <h2 id="question-text"></h2>
+      <div id="description" class="description-text" hidden></div>
+      <div id="options" class="question-options" role="group" aria-label="Выбери ответ"></div>
+      <div class="explanation" id="explanation" hidden></div>
+      <button class="primary-btn" id="answer-btn" type="button" disabled>Проверить ответ <span aria-hidden="true">→</span></button>
+      <div class="loader" id="question-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="mini-screen" id="finish-screen" hidden>
+      <div class="eyebrow"><span class="eyebrow-line"></span> Всё вы́читано</div>
+      <h1>Вот и<br><span class="hero-accent">результат.</span></h1>
+      <div class="big-result"><span id="score">0</span> <small>из 6</small></div>
+      <p class="lead" id="result-joke"></p>
+      <button id="view-stats-btn" class="secondary-mini-btn" type="button" hidden>Как справились остальные? →</button>
+      <div id="stats-pending" class="notice" hidden></div>
+      <div id="stats-gate" class="subscription-panel" hidden>
+        <h3>А остальные справились лучше?</h3>
+        <p id="subscription-description">Узнай, какие вопросы оказались самыми сложными. Подпишись на вы́Читать, чтобы увидеть общую статистику после 19:00 МСК.</p>
+        <button id="subscribe-btn" class="primary-btn" type="button">Подписаться на вы́Читать <span aria-hidden="true">↗</span></button>
+        <button id="check-subscription-btn" class="secondary-mini-btn" type="button">Я подписался — проверить подписку</button>
+        <p id="subscription-status" class="subscription-message" role="status" aria-live="polite"></p>
+      </div>
+      <button id="share-result-btn" class="share-mini-btn" type="button">Поделиться результатом ↗</button>
+      <p class="saved-note">Твои ответы сохранены. Одна попытка на выпуск.</p>
+    </section>
+
+    <section class="mini-screen" id="statistics-screen" hidden>
+      <div id="stats-section" hidden>
+        <div class="eyebrow">Как справились остальные?</div>
+        <p class="stat-caption">Статистика на момент открытия. Только проценты, без количества участников.</p>
+        <div id="stats" class="stats"></div>
+      </div>
+
+      <button class="primary-btn" id="stats-back-btn" type="button">Мой результат <span>←</span></button>
+    </section>
+    <section class="mini-screen" id="share-screen" hidden>
+      <div class="share-card">
+        <img class="card-logo" src="./assets/vychitat-logo.png" alt="вы́Читать">
+        <h1>Мой<br><span class="hero-accent">результат</span></h1>
+        <div class="big-result"><span id="share-score">0</span> <small>из 6</small></div>
+        <p>в тесте по русскому языку<br>в канале вы́Читать</p>
+      </div>
+      <button class="primary-btn" id="share-send-btn" type="button">Поделиться в Telegram <span>↗</span></button>
+      <button class="secondary-mini-btn" id="share-back-btn" type="button">Назад к результату</button>
+    </section>
+    <section class="mini-screen" id="completed-screen" hidden>
+      <h1>Этот выпуск<br><span class="hero-accent">уже пройден.</span></h1>
+      <p class="lead">Ты уже ответил на все вопросы этого выпуска. Повторно пройти его нельзя.</p>
+      <button class="primary-btn" id="completed-result-btn" type="button">Посмотреть результат <span>→</span></button>
+    </section>
+    <section class="mini-screen" id="loading-screen" hidden aria-live="polite">
+      <div class="loading-emblem"><span></span></div>
+      <p>Загрузка<br>теста…</p><div class="loading-track"></div>
+    </section>
+  </main>
+
+
+</div>
+<script>
+"use strict";
+const telegram=window.Telegram?.WebApp || null;
+try { telegram?.ready(); telegram?.expand(); } catch (_) {}
+const el=id=>document.getElementById(id);
+const screens=["connect-screen","intro-screen","question-screen","finish-screen","statistics-screen","share-screen","completed-screen","loading-screen"];
+let currentState=null,currentIndex=0,selection=new Set(),showingFeedback=false;
+let clockId=null,clockPending=false,requestBusy=false;
+const jokes=[
+  "Ты последовательно отстаивал альтернативную орфографию.",
+  "Один правильный ответ. Остальные пока в авторской редакции.",
+  "Между тобой и русским языком есть искра. Пока в основном от трения.",
+  "Половина тебя — корректор. Вторая половина мешает ему работать.",
+  "Две ошибки оставлены специально, чтобы редактору было чем заняться.",
+  "Одна ошибка — это уже не безграмотность, а сюжетный поворот.",
+  "Всё правильно. Теперь можешь исправлять админа."
+];
+
+
+function stopClock(){if(clockId!==null){clearInterval(clockId);clockId=null}}
+function renderCountdown(){
+  if(showingFeedback || !currentState?.activeTimer) return;
+  const info=currentState.activeTimer;
+  const remaining=Math.max(0,Math.ceil((info.deadlineMs-Date.now())/1000));
+  const urgent=remaining<=10;
+  const mins=Math.floor(remaining/60);
+  const secs=remaining%60;
+  el("timer-chip").textContent=String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0");
+  el("timer-chip").classList.toggle("urgent",urgent);
+  el("timer-chip").classList.toggle("expired",remaining===0);
+  el("timer-track").classList.toggle("urgent",urgent);
+  el("timer-fill").style.width=Math.max(0,Math.min(100,remaining*100/info.durationSec))+"%";
+  if(remaining===0 && !clockPending && !requestBusy){
+    clockPending=true;
+    expireQuestion();
+  }
+}
+async function expireQuestion(){
+  stopClock();
+  el("answer-btn").disabled=true;
+  el("question-status").textContent="Время истекло. Засчитываю вопрос…";
+  try{
+    requestBusy=true;
+    const oldIndex=currentIndex;
+    currentState=await call("expire");
+    requestBusy=false;
+    el("question-status").textContent="";
+    const previous=currentState.answers.find(a=>a.questionId===currentState.questions[oldIndex].id);
+    if(previous){currentIndex=oldIndex;showFeedback();}
+    else{
+      // Server may receive the request a fraction of a second before deadline.
+      clockPending=false;startClock();
+    }
+  }catch(e){
+    requestBusy=false;
+    clockPending=false;
+    logError("question-status","Не удалось подтвердить истечение времени. Нажми «Проверить время» ещё раз.");
+    el("answer-btn").firstChild.textContent="Проверить время ";
+    el("answer-btn").disabled=false;
+    showingFeedback=false;
+  }
+}
+function startClock(){
+  stopClock();
+  if(!currentState?.activeTimer)return;
+  clockId=setInterval(renderCountdown,250);
+  renderCountdown();
+}
+
+function show(screen){
+  screens.forEach(s=>{el(s).hidden=s!==screen});
+  document.querySelector('.page').dataset.screen=screen;
+  document.querySelector('.page').classList.toggle('feedback-mode',screen==='question-screen'&&showingFeedback);
+  if(telegram?.BackButton){
+    if(['statistics-screen','share-screen'].includes(screen))telegram.BackButton.show();else telegram.BackButton.hide();
+  }
+  window.scrollTo(0,0);
+}
+function logError(id,message){el(id).textContent=message;el(id).classList.add("status-error")}
+const CLOUDFLARE_API = "https://vychitat.fr-novii.workers.dev/api";
+async function call(action,payload){
+  if(!telegram?.initData) throw new Error("Открой тест внутри Telegram.");
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  try{
+    const response=await fetch(CLOUDFLARE_API,{
+      method:"POST",mode:"cors",credentials:"omit",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action,initData:telegram.initData,payload:payload||null}),
+      signal:controller.signal
+    });
+    const data=await response.json();
+    if(!response.ok||!data?.ok)throw new Error(String(data?.error||"Ошибка сервера"));
+    return data;
+  }catch(e){
+    if(e?.name==="AbortError")throw new Error("Сервер не ответил за 15 секунд.");
+    throw e;
+  }finally{clearTimeout(timeout)}
+}
+async function initialize(){
+  if(!telegram?.initData){
+    el("telegram-notice").hidden=false;
+    logError("connect-status","Открой страницу через кнопку Telegram-бота.");return;
+  }
+  el("connect-btn").disabled=true;
+  el("connect-screen").classList.add("is-loading");
+  el("connect-status").classList.remove("status-error");
+  el("connect-status").textContent="Проверяю Telegram и загружаю вопросы…";
+  show("loading-screen");
+  try{
+    currentState=await call("state");
+    showInitialState();
+  }catch(e){show("connect-screen");logError("connect-status",String(e.message||e))}
+  finally{el("connect-btn").disabled=false;el("connect-screen").classList.remove("is-loading")}
+}
+function showInitialState(){
+  if(currentState.complete){show("completed-screen");return}
+  const n=currentState.answers.length;
+  if(currentState.activeTimer){
+    currentIndex=n;
+    renderQuestion();
+    return;
+  }
+  el("intro-greeting").textContent="Шесть вопросов, чтобы проверить себя и вспомнить главное.";
+  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить»." : "Отсчёт начнётся, когда откроешь первый вопрос.";
+  el("begin-btn").firstChild.textContent=n?"Продолжить тест ":"Начать тест ";
+  show("intro-screen");
+}
+async function beginQuestion(){
+  el("begin-btn").disabled=true;
+  try{
+    currentState=await call("open");
+    if(currentState.complete){renderFinish();return}
+    if(!currentState.activeTimer)throw new Error("Сервер не запустил таймер.");
+    renderQuestion();
+  }catch(e){
+    el("resume-text").textContent="Ошибка: "+String(e.message||e);
+  }finally{el("begin-btn").disabled=false}
+}
+function renderQuestion(){
+  showingFeedback=false;selection=new Set();clockPending=false;
+  document.querySelector(".page").classList.remove("feedback-mode");
+  el("timer-chip").classList.remove("expired");
+  currentIndex=currentState.answers.length;
+  const q=currentState.questions[currentIndex];
+  if(!q){
+    logError("resume-text","Следующий вопрос ещё не открыт. Нажми «Продолжить тест».");
+    show("intro-screen");return
+  }
+  el("question-count").textContent="Вопрос "+q.id+"/6";
+  el("question-type").textContent=q.multiple?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
+  el("progress").style.width=((currentIndex/6)*100)+"%";
+  el("question-text").textContent=q.text;
+  el("description").hidden=!q.description;
+  el("description").textContent=q.description || "";
+  el("explanation").hidden=true;
+  el("question-status").textContent="";
+  el("options").replaceChildren();
+  q.options.forEach((value,i)=>{
+    const button=document.createElement("button");
+    button.type="button";button.className="question-choice";button.setAttribute("aria-pressed","false");
+    const marker=document.createElement("span");marker.className="marker";marker.textContent=String.fromCharCode(65+i);marker.setAttribute("aria-hidden","true");
+    const text=document.createElement("span");text.textContent=value;
+    button.append(marker,text);
+    button.addEventListener("click",()=>choose(i,q.multiple));
+    el("options").appendChild(button);
+  });
+  el("answer-btn").disabled=true;
+  el("answer-btn").firstChild.textContent="Проверить ответ ";
+  show("question-screen");
+  startClock();
+}
+function choose(i,multiple){
+  if(showingFeedback)return;
+  if(!multiple)selection=new Set([i]);
+  else if(selection.has(i))selection.delete(i);
+  else selection.add(i);
+  Array.from(el("options").children).forEach((b,n)=>{
+    const yes=selection.has(n);
+    b.classList.toggle("selected",yes);b.setAttribute("aria-pressed",yes?"true":"false");
+  });
+  el("answer-btn").disabled=selection.size===0;
+}
+function showFeedback(){
+  const q=currentState.questions[currentIndex];
+  const answer=currentState.answers.find(a=>a.questionId===q.id);
+  if(!answer){renderQuestion();return}
+  showingFeedback=true;stopClock();
+  document.querySelector(".page").classList.add("feedback-mode");
+  window.scrollTo(0,0);
+  if(answer.timedOut){
+    el("timer-chip").textContent="00:00";
+    el("timer-chip").classList.add("urgent","expired");
+    el("timer-track").classList.add("urgent");
+    el("timer-fill").style.width="0%";
+  }
+  Array.from(el("options").children).forEach((b,i)=>{
+    b.disabled=true;
+    b.classList.toggle("selected",answer.selected.includes(i));
+    b.classList.toggle("right",answer.correctOptions.includes(i));
+    b.classList.toggle("wrong",answer.selected.includes(i)&&!answer.correctOptions.includes(i));
+  });
+  const box=el("explanation");box.replaceChildren();box.hidden=false;
+  box.classList.toggle("wrong",!answer.correct);
+  const title=document.createElement("strong");title.textContent=answer.timedOut?"Время вышло.":(answer.correct?"Верно!":"Не совсем.");
+  const desc=document.createElement("p");desc.textContent=answer.explanation||"Ответ сохранён.";
+  box.append(title,desc);
+  el("answer-btn").firstChild.textContent=currentState.complete?"Посмотреть результат ":"Следующий вопрос ";
+  el("answer-btn").disabled=false;
+}
+async function answer(){
+  if(requestBusy)return;
+  if(showingFeedback){
+    if(currentState.complete){renderFinish();return}
+    el("answer-btn").disabled=true;
+    try{
+      currentState=await call("open");
+      if(currentState.complete)renderFinish();
+      else renderQuestion();
+    }catch(e){logError("question-status",String(e.message||e));el("answer-btn").disabled=false}
+    return;
+  }
+  if(!selection.size && Date.now()<currentState.activeTimer?.deadlineMs)return;
+  if(Date.now()>=currentState.activeTimer?.deadlineMs) {
+    if(!clockPending){clockPending=true;await expireQuestion();}
+    return;
+  }
+  requestBusy=true;
+  el("answer-btn").disabled=true;
+  el("question-status").textContent="Сохраняю ответ…";
+  try{
+    const q=currentState.questions[currentIndex];
+    currentState=await call("answer",{questionId:q.id,selected:Array.from(selection)});
+    el("question-status").textContent="";
+    showFeedback();
+  }catch(e){
+    logError("question-status",String(e.message||e));
+    el("answer-btn").disabled=false;
+  }finally{requestBusy=false}
+}
+function statisticsWhen(){
+  const timestamp=String(currentState?.statisticsAt||"");
+  let today="";
+  try{
+    today=new Intl.DateTimeFormat("ru-RU",{
+      day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Moscow"
+    }).format(new Date());
+  }catch(_){}
+  return timestamp.slice(0,10)===today
+    ?"сегодня после 19:00 МСК"
+    :"после "+timestamp+" (МСК)";
+}
+function renderFinish(){stopClock();
+  el("score").textContent=String(currentState.score??0);
+  el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
+  const stats=el("stats"),section=el("stats-section"),pendingBox=el("stats-pending");
+  const gate=el("stats-gate");
+  const message=el("subscription-status");
+  const recheck=el("check-subscription-btn");
+  message.textContent="";
+  message.classList.remove("status-error");
+  recheck.disabled=false;
+  stats.replaceChildren();
+  section.hidden=true;
+  el("view-stats-btn").hidden=true;
+  gate.hidden=true;
+  pendingBox.hidden=true;
+  if(Array.isArray(currentState.statistics)){
+    section.hidden=false;
+    el("view-stats-btn").hidden=false;
+    currentState.statistics.forEach(item=>{
+      const outer=document.createElement("div");
+      const head=document.createElement("div");head.className="stats-head";
+      const label=document.createElement("strong");label.textContent="Вопрос "+item.questionId;
+      const values=document.createElement("span");
+      values.textContent="Верно "+item.correctPercent+"% · Ошибки "+item.incorrectPercent+"%";
+      head.append(label,values);
+      const track=document.createElement("div");track.className="stats-track";
+      const good=document.createElement("div");good.className="stats-good";good.style.width=item.correctPercent+"%";
+      const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
+      track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
+    });
+  } else if(currentState.subscriptionStatus==="member" && !currentState.statsReady) {
+    pendingBox.hidden=false;
+    pendingBox.textContent="Подписка на вы́Читать подтверждена. Общие итоги будут доступны "+
+      statisticsWhen()+". Открой приложение после 19:00, чтобы их увидеть.";
+  } else {
+    // Предлагаем подписаться СРАЗУ после теста, даже если сейчас 10:00.
+    gate.hidden=false;
+    const description=el("subscription-description");
+    description.textContent=currentState.statsReady
+      ?"Итоги уже доступны! Подпишись на вы́Читать и проверь подписку, чтобы увидеть, как ответили остальные."
+      :"Подпишись на вы́Читать сейчас, чтобы увидеть статистику "+
+        statisticsWhen()+". Подписку можно подтвердить сразу после прохождения теста.";
+    if(currentState.subscriptionStatus==="unavailable"){
+      message.textContent="Не удалось проверить подписку через Telegram. Попробуй ещё раз.";
+      message.classList.add("status-error");
+    } else {
+      message.textContent=currentState.statsReady
+        ?"После подписки нажми «Я подписался — проверить подписку»."
+        :"Подпишись сейчас и нажми «Я подписался — проверить подписку». Итоги появятся после 19:00.";
+    }
+  }
+  show("finish-screen");
+}
+function openTelegram(url){
+  if(telegram?.openTelegramLink) telegram.openTelegramLink(url);
+  else window.open(url,"_blank","noopener,noreferrer");
+}
+async function checkSubscription(){
+  const button=el("check-subscription-btn");
+  if(requestBusy||!currentState?.complete)return;
+  requestBusy=true;
+  button.disabled=true;
+  const status=el("subscription-status");
+  status.classList.remove("status-error");
+  status.textContent="Проверяем подписку через Telegram…";
+  try {
+    const next=await call("checkSubscription");
+    currentState=next;
+    renderFinish();
+    if(next.subscriptionStatus==="required"){
+      status.textContent="Подписка пока не найдена. Подпишись и попробуй снова.";
+      status.classList.add("status-error");
+    }
+  } catch(e) {
+    status.textContent="Не удалось проверить подписку. Попробуй ещё раз.";
+    status.classList.add("status-error");
+  } finally {
+    requestBusy=false;
+    button.disabled=false;
+  }
+}
+async function shareResult(){
+  if(!currentState?.complete || requestBusy)return;
+  const button=el("share-send-btn");
+  const label=button.textContent;
+  requestBusy=true;
+  button.disabled=true;
+  button.textContent="Готовлю сообщение…";
+  try{
+    if(typeof telegram?.shareMessage==="function"){
+      const prepared=await call("share");
+      if(prepared?.shareId){
+        telegram.shareMessage(prepared.shareId);
+        return;
+      }
+    }
+    throw new Error("Нативное меню недоступно");
+  }catch(_){
+    // Старый Telegram: ссылки будут видны как URL — share/url не поддерживает
+    // встроенные ссылки, используем его только как резервный вариант.
+    const score=Number(currentState.score)||0;
+    const message="Я набрал "+score+" из 6 в тесте канала вы́Читать по русскому языку.\n"+
+      "Канал: https://t.me/posttsop\nА ты справишься лучше?";
+    const share="https://t.me/share/url?url="+
+      encodeURIComponent("https://t.me/posttsop_test_bot?start=quiz")+
+      "&text="+encodeURIComponent(message);
+    openTelegram(share);
+  }finally{
+    requestBusy=false;
+    button.disabled=false;
+    button.textContent=label;
+  }
+}
+el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
+el("check-subscription-btn").addEventListener("click",checkSubscription);
+el("share-result-btn").addEventListener("click",()=>{el("share-score").textContent=String(currentState.score??0);show("share-screen")});
+el("share-send-btn").addEventListener("click",shareResult);
+el("view-stats-btn").addEventListener("click",()=>show("statistics-screen"));
+["stats-back-btn","share-back-btn","completed-result-btn"].forEach(id=>el(id).addEventListener("click",renderFinish));
+telegram?.BackButton?.onClick(()=>renderFinish());
+el("connect-btn").addEventListener("click",initialize);
+el("begin-btn").addEventListener("click",beginQuestion);
+el("answer-btn").addEventListener("click",answer);
+if(!telegram?.initData)el("telegram-notice").hidden=false;
+else initialize();
+</script>
+
+<script>
+/* Synchronise the timer's visual state with the actual numbers, on every screen. */
+(function(){
+  const timer=document.getElementById("timer-chip");
+  if(!timer)return;
+  function refreshTimerInk(){
+    const shown=timer.textContent.trim();
+    const match=/^(\d+):(\d{2})$/.exec(shown);
+    const secs=match?Number(match[1])*60+Number(match[2]):Infinity;
+    timer.classList.toggle("expired",secs===0);
+    timer.classList.toggle("urgent",secs<=10);
+    if(secs<=10)timer.style.setProperty("color","#c02621","important");
+    else timer.style.removeProperty("color");
+  }
+  new MutationObserver(refreshTimerInk).observe(timer,{childList:true,characterData:true,subtree:true});
+  refreshTimerInk();
+})();
+</script>
+</body></html>
