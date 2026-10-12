@@ -173,6 +173,9 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 #intro-screen .intro-title-top{display:block;font-size:clamp(51px,13.8vw,78px);white-space:nowrap}
 #intro-screen .intro-title-bottom{display:block;white-space:nowrap;font-size:clamp(27px,8.8vw,48px);line-height:1.18;letter-spacing:-.035em;overflow:visible}
 @media(max-width:330px){#intro-screen .intro-title-bottom{font-size:8.5vw}}
+
+/* When the timer expires, 00:00 remains red. */
+.time-chip.expired{color:#c02621}
 </style>
 </head>
 <body>
@@ -295,6 +298,7 @@ function renderCountdown(){
   const secs=remaining%60;
   el("timer-chip").textContent=String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0");
   el("timer-chip").classList.toggle("urgent",urgent);
+  el("timer-chip").classList.toggle("expired",remaining===0);
   el("timer-track").classList.toggle("urgent",urgent);
   el("timer-fill").style.width=Math.max(0,Math.min(100,remaining*100/info.durationSec))+"%";
   if(remaining===0 && !clockPending && !requestBusy){
@@ -396,6 +400,7 @@ async function beginQuestion(){
 }
 function renderQuestion(){
   showingFeedback=false;selection=new Set();clockPending=false;
+  el("timer-chip").classList.remove("expired");
   currentIndex=currentState.answers.length;
   const q=currentState.questions[currentIndex];
   if(!q){
@@ -441,6 +446,12 @@ function showFeedback(){
   const answer=currentState.answers.find(a=>a.questionId===q.id);
   if(!answer){renderQuestion();return}
   showingFeedback=true;stopClock();
+  if(answer.timedOut){
+    el("timer-chip").textContent="00:00";
+    el("timer-chip").classList.add("urgent","expired");
+    el("timer-track").classList.add("urgent");
+    el("timer-fill").style.width="0%";
+  }
   Array.from(el("options").children).forEach((b,i)=>{
     b.disabled=true;
     b.classList.toggle("selected",answer.selected.includes(i));
