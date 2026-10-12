@@ -173,6 +173,9 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 #intro-screen .intro-title-top{display:block;font-size:clamp(51px,13.8vw,78px);white-space:nowrap}
 #intro-screen .intro-title-bottom{display:block;white-space:nowrap;font-size:clamp(27px,8.8vw,48px);line-height:1.18;letter-spacing:-.035em;overflow:visible}
 @media(max-width:330px){#intro-screen .intro-title-bottom{font-size:8.5vw}}
+
+/* When the timer expires, 00:00 remains red. */
+.time-chip.expired{color:#c02621}
 </style>
 <style>
 .reviewer{position:fixed;z-index:100;bottom:9px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#171717;border:1px solid #555;color:#fff;padding:8px 12px;max-width:calc(100vw - 16px);border-radius:25px;box-shadow:0 4px 18px #0005}
@@ -303,7 +306,7 @@ let qi=0,selected=new Set(),feedback=false,corrects=0,reviewTimer=null;
 function visible(name){screens.forEach(id=>el(id).hidden=id!==name+"-screen");window.scrollTo(0,0);}
 function showMockQuestion(n){
  qi=n; selected.clear();feedback=false; const q=items[n];visible("question");
- el("question-count").textContent="ВОПРОС "+(n+1)+" ИЗ 6";el("timer-chip").textContent="00:47";
+ el("question-count").textContent="ВОПРОС "+(n+1)+" ИЗ 6";el("timer-chip").textContent="00:47";el("timer-chip").classList.remove("urgent","expired");el("timer-track").classList.remove("urgent");
  el("timer-fill").style.width=((6-n)/6*100)+"%";
  el("question-type").textContent=q.correct.length>1?"НЕСКОЛЬКО ОТВЕТОВ":"ОДИН ОТВЕТ";
  el("question-text").textContent=q.text;
@@ -368,7 +371,7 @@ el("design-switch").addEventListener("change",e=>{
  if(mode==="ten"){showMockQuestion(0);const q=items[0];q.options.splice(0,q.options.length,...Array.from({length:10},(_,i)=>"Пример длинного варианта ответа № "+(i+1)));showMockQuestion(0);updateSelector("ten");return}
  if(mode==="correct"){showMockQuestion(0);selected.add(1);checkMock();return}
  if(mode==="wrong"){showMockQuestion(0);selected.add(0);checkMock();return}
- if(mode==="timeout"){showMockQuestion(0);selected.clear();feedback=true;el("timer-chip").textContent="00:00";const ex=el("explanation");ex.hidden=false;ex.classList.add("wrong");ex.replaceChildren();const title=document.createElement("strong");title.textContent="Время вышло!";const p=document.createElement("p");p.textContent="Ответ не засчитан. Дальше — следующий вопрос.";ex.append(title,p);el("answer-btn").disabled=false;el("answer-btn").firstChild.textContent="Следующий вопрос ";return}
+ if(mode==="timeout"){showMockQuestion(0);selected.clear();feedback=true;el("timer-chip").textContent="00:00";el("timer-chip").classList.add("urgent","expired");el("timer-track").classList.add("urgent");el("timer-fill").style.width="0%";updateSelector("timeout");const ex=el("explanation");ex.hidden=false;ex.classList.add("wrong");ex.replaceChildren();const title=document.createElement("strong");title.textContent="Время вышло!";const p=document.createElement("p");p.textContent="Ответ не засчитан. Дальше — следующий вопрос.";ex.append(title,p);el("answer-btn").disabled=false;el("answer-btn").firstChild.textContent="Следующий вопрос ";return}
  if(mode==="stats"||mode==="result"){corrects=2;showResult(mode);return}
  if(mode==="loading"){visible("connect");el("connect-status").textContent="Проверяем Telegram и загружаем вопросы…";updateSelector("loading");return}
  if(mode==="done"){corrects=2;showResult("result");el("result-joke").textContent="Этот выпуск уже пройден. Твои ответы сохранены.";return}
