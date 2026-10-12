@@ -20,6 +20,8 @@ function cfReleasePreflight() {
   console.log('Webhook: '+(check.webhookUrl||'не задан'));
   console.log('Приглашения: '+check.invitationsEnabled);
   console.log('Недельный цикл: '+check.weeklyEnabled);
+  console.log('Вечерняя рассылка: '+check.statsPushEnabled);
+  console.log('Таблицы вечерней статистики: '+check.statsTablesReady);
   console.log('Готовность к публикации: '+check.readyForPublic);
   console.log('Общее меню: '+check.globalMenuReady);
   console.log('Личное меню: '+check.privateMenuReady);
@@ -67,6 +69,8 @@ function cfReleaseRequireApproval_(){
     throw new Error('ACCESS_MODE должен быть pilot или public.');
   if(check.accessMode==='public'&&!check.readyForPublic)
     throw new Error('Выпуск содержит тестовые формулировки. Публичный доступ запрещён.');
+  if(check.statsPushEnabled&&!check.statsTablesReady)
+    throw new Error('Для вечерней рассылки сначала установи две таблицы D1.');
   return check;
 }
 
@@ -199,4 +203,25 @@ function cfReleasePublishMenu() {
   if(check.accessMode!=='public'||!check.readyForPublic)
     throw new Error('Публичный режим или настоящие вопросы ещё не готовы.');
   return cfReleaseSwitchMenu();
+}
+
+/**
+ * Ручной запуск следующего пакета вечерних уведомлений после 19:00 МСК.
+ * Допускается только в режиме public и после настройки webhook, D1 и
+ * STATS_PUSH_ENABLED=yes. Первые 20 сообщений отправляются однократно.
+ * Пользователи получают только проценты, без абсолютных значений.
+ */
+function cfReleaseSendEveningStats20() {
+  const check=cfReleaseRequireApproval_();
+  if(check.accessMode!=='public')
+    throw new Error('Вечерние уведомления доступны только в публичном режиме.');
+  if(!check.statsPushEnabled||!check.statsTablesReady)
+    throw new Error('Сначала включи STATS_PUSH_ENABLED=yes и создай D1-таблицы.');
+  if(check.webhookUrl!=='https://vychitat.fr-novii.workers.dev/telegram')
+    throw new Error('Сначала подключи Cloudflare webhook.');
+  const res=cfAdminCall_('sendEveningStats',{limit:20});
+  console.log('Вечерняя статистика: отправлено '+res.sent+
+    ', не подписаны '+res.notMember+', заблокированы '+res.blocked+
+    ', ошибок '+res.errors+'.');
+  return res;
 }
