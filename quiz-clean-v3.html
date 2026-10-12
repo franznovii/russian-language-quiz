@@ -28,19 +28,34 @@
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:4px;
+  gap:5px;
   max-width:85%;
+  margin-top:8px;
+  margin-bottom:0;
+  padding:0;
+}
+#intro-screen .intro-facts,
+#intro-screen .intro-facts span,
+#intro-screen .resume{
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.35;
+  letter-spacing:normal;
+  color:var(--ink);
 }
 #intro-screen .intro-facts span{
   display:block;
   background:none;
   padding:0;
+  margin:0;
 }
 #intro-screen .resume{
   background:none;
   padding:0;
   max-width:85%;
-  margin-top:10px;
+  margin-top:5px;
+  white-space:pre-line;
 }
 </style>
 </head>
@@ -256,7 +271,7 @@ function showInitialState(){
     return;
   }
   el("intro-greeting").textContent="Шесть вопросов, чтобы проверить себя и вспомнить главное.";
-  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить»." : "Отсчёт начнётся, когда откроешь первый вопрос.";
+  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить»." : "Отсчёт начнётся,\nкогда откроешь\nпервый вопрос";
   el("begin-btn").firstChild.textContent=n?"Продолжить тест ":"Начать тест ";
   show("intro-screen");
 }
