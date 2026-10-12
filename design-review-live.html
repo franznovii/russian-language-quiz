@@ -358,8 +358,8 @@ el("share-result-btn").addEventListener("click",()=>{el("question-status").textC
 el("design-switch").addEventListener("change",e=>{
  const mode=e.target.value;
  if(mode==="intro"||mode==="connect"){visible(mode);return}
- if(mode==="question")return showMockQuestion(0);
- if(mode==="ten"){showMockQuestion(0);const q=items[0];q.options.splice(0,q.options.length,...Array.from({length:10},(_,i)=>"Пример длинного варианта ответа № "+(i+1)));showMockQuestion(0);return}
+ if(mode==="question"){items[0].options=Array.from({length:6},(_,i)=>"Вариант ответа "+(i+1));return showMockQuestion(0)}
+ if(mode==="ten"){showMockQuestion(0);const q=items[0];q.options.splice(0,q.options.length,...Array.from({length:10},(_,i)=>"Пример длинного варианта ответа № "+(i+1)));showMockQuestion(0);updateSelector("ten");return}
  if(mode==="correct"){showMockQuestion(0);selected.add(1);checkMock();return}
  if(mode==="wrong"){showMockQuestion(0);selected.add(0);checkMock();return}
  if(mode==="timeout"){showMockQuestion(0);selected.clear();feedback=true;el("timer-chip").textContent="00:00";const ex=el("explanation");ex.hidden=false;ex.classList.add("wrong");ex.replaceChildren();const title=document.createElement("strong");title.textContent="Время вышло!";const p=document.createElement("p");p.textContent="Ответ не засчитан. Дальше — следующий вопрос.";ex.append(title,p);el("answer-btn").disabled=false;el("answer-btn").firstChild.textContent="Следующий вопрос ";return}
