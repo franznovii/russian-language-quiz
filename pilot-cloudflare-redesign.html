@@ -176,6 +176,10 @@ h2{font-size:clamp(32px,8vw,48px);line-height:1.13;letter-spacing:-.01em;margin:
 
 /* When the timer expires, 00:00 remains red. */
 .time-chip.expired{color:#c02621}
+
+/* Timer ink is driven by the displayed value as a defense against stale screen state. */
+#timer-chip.time-chip.urgent,
+#timer-chip.time-chip.expired{color:#c02621!important}
 </style>
 </head>
 <body>
@@ -626,5 +630,24 @@ el("connect-btn").addEventListener("click",initialize);
 el("begin-btn").addEventListener("click",beginQuestion);
 el("answer-btn").addEventListener("click",answer);
 if(!telegram?.initData)el("telegram-notice").hidden=false;
+</script>
+
+<script>
+/* Synchronise the timer's visual state with the actual numbers, on every screen. */
+(function(){
+  const timer=document.getElementById("timer-chip");
+  if(!timer)return;
+  function refreshTimerInk(){
+    const shown=timer.textContent.trim();
+    const match=/^(\d+):(\d{2})$/.exec(shown);
+    const secs=match?Number(match[1])*60+Number(match[2]):Infinity;
+    timer.classList.toggle("expired",secs===0);
+    timer.classList.toggle("urgent",secs<=10);
+    if(secs<=10)timer.style.setProperty("color","#c02621","important");
+    else timer.style.removeProperty("color");
+  }
+  new MutationObserver(refreshTimerInk).observe(timer,{childList:true,characterData:true,subtree:true});
+  refreshTimerInk();
+})();
 </script>
 </body></html>
