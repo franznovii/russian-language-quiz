@@ -104,6 +104,48 @@ function validateQuestions(input) {
   return list.sort((a,b)=>a.id-b.id);
 }
 
+
+function validateResultComments(input) {
+  if(!Array.isArray(input)||input.length!==7) throw err('Нужно семь групп комментариев для баллов 0–6');
+  return input.map((group,score)=>{
+    if(!Array.isArray(group)||!group.length||group.length>30||
+       group.some(v=>typeof v!=='string'||!v.trim()||v.length>700)||
+       new Set(group).size!==group.length) throw err('Проверь комментарии для '+score+'/6');
+    return group.map(x=>x.trim());
+  });
+}
+async function commentForResult(db,run,user,score) {
+  try {
+    const row=await db.prepare('SELECT messages_json FROM mini_result_comments WHERE run_id=? AND score=?')
+      .bind(run.id,score).first();
+    if(!row)return null;
+    const choices=JSON.parse(row.messages_json);
+    if(!Array.isArray(choices)||!choices.length)return null;
+    const seed=run.id+':'+String(user.id)+':'+score;
+    let hash=2166136261;
+    for(let i=0;i<seed.length;i++) hash=Math.imul(hash^seed.charCodeAt(i),16777619)>>>0;
+    return choices[hash%choices.length];
+  }catch(e){
+    // Старые выпуски без таблицы комментариев используют штатный текст.
+    console.warn('Result comments unavailable:',String(e.message));
+    return null;
+  }
+}
+async function googleBridge(env,action,extra={}) {
+  const target=String(env.GAS_BRIDGE_URL||'').trim(),key=String(env.GAS_BRIDGE_KEY||'');
+  if(!target.startsWith('https://script.google.com/macros/s/')||!target.endsWith('/exec')||key.length<32)
+    throw err('Не настроен мост к Google Sheets (GAS_BRIDGE_URL / GAS_BRIDGE_KEY)',503);
+  const u=new URL(target);
+  u.searchParams.set('bot_admin','1');
+  const response=await fetch(u.toString(),{method:'POST',
+    headers:{'content-type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action,key,...extra}),redirect:'follow'});
+  if(!response.ok)throw err('Google Sheets: HTTP '+response.status,502);
+  const data=await response.json().catch(()=>null);
+  if(!data?.ok)throw err('Google Sheets: '+String(data?.error||'некорректный ответ'),502);
+  return data;
+}
+
 async function activeEdition(db) {
   const row = await db.prepare("SELECT run_id,stats_after,questions_snapshot_json FROM mini_editions WHERE status='ACTIVE' ORDER BY created_at DESC LIMIT 1").first();
   if (!row) throw err('Пока нет активного выпуска',409);
@@ -143,11 +185,12 @@ async function stateFor(db,run,user) {
   const timer=next?await currentTimer(db,run,user,next):null;
   const complete=answers.length===QCOUNT;
   const statsReady=complete && timestamp()>=run.statsAt;
+  const resultComment=complete?await commentForResult(db,run,user,answers.filter(a=>a.correct).length):null;
   return {ok:true,userName:String(user.first_name||'Участник').slice(0,80),runId:run.id,
     questions:run.questions.map((q,index)=>(index>answers.length||(index===answers.length&&!timer))?null:
       {id:q.id,text:q.text,description:q.description,options:q.options,multiple:q.correct.length>1,timeSeconds:q.timeSeconds}),
     answers,activeTimer:timer?{questionId:next.id,deadlineMs:Number(timer.deadline_at),durationSec:next.timeSeconds}:null,
-    complete,score:complete?answers.filter(a=>a.correct).length:null,statistics:null,
+    complete,score:complete?answers.filter(a=>a.correct).length:null,resultComment,statistics:null,
     subscriptionStatus:complete?'checking':'not_finished',statsReady,statisticsAt:statsAtLabel(run.statsAt)};
 }
 async function openFor(db,run,user) {
@@ -345,9 +388,21 @@ async function telegramUpdate(env,update) {
 
 async function stageQuestions(db,body) {
   const questions=validateQuestions(body.questions);
-  await db.prepare(`INSERT INTO mini_drafts(draft_id,questions_json,updated_at) VALUES(1,?,unixepoch())
-    ON CONFLICT(draft_id) DO UPDATE SET questions_json=excluded.questions_json,updated_at=unixepoch()`)
-    .bind(JSON.stringify(questions)).run();
+  const stmt=db.prepare("INSERT INTO mini_drafts(draft_id,questions_json,updated_at) VALUES(1,?,unixepoch()) ON CONFLICT(draft_id) DO UPDATE SET questions_json=excluded.questions_json,updated_at=unixepoch()")
+    .bind(JSON.stringify(questions));
+  if(body.comments!==undefined){
+    const comments=validateResultComments(body.comments);
+    const tasks=[stmt,db.prepare("DELETE FROM mini_result_comments WHERE run_id='__draft__'")];
+    for(let score=0;score<7;score++)
+      tasks.push(db.prepare('INSERT INTO mini_result_comments(run_id,score,messages_json) VALUES(?,?,?)')
+        .bind('__draft__',score,JSON.stringify(comments[score])));
+    await db.batch(tasks);
+    return {ok:true,questionCount:6,commentCount:comments.reduce((n,g)=>n+g.length,0)};
+  }
+  // Совместимость со старым ручным запуском из GAS.
+  await stmt.run();
+  try {await db.prepare("DELETE FROM mini_result_comments WHERE run_id='__draft__'").run();}
+  catch(_) {/* Миграция для старого ручного запуска необязательна. */}
   return {ok:true,questionCount:6};
 }
 async function activateDraft(db,force=false) {
@@ -357,12 +412,18 @@ async function activateDraft(db,force=false) {
   const current=await db.prepare("SELECT questions_snapshot_json FROM mini_editions WHERE status='ACTIVE' ORDER BY created_at DESC LIMIT 1").first();
   if (!force&&current&&current.questions_snapshot_json===JSON.stringify(questions)) return {ok:true,created:false,message:'Вопросы не изменились'};
   const runId=`timed_${crypto.randomUUID()}`;
-  // A D1 transaction batch is atomic; active edition is swapped only after the insert succeeds.
-  await db.batch([
+  // История ответов не затрагивается; варианты комментариев фиксируются на выпуск.
+  const statements=[
     db.prepare("UPDATE mini_editions SET status='ARCHIVED' WHERE status='ACTIVE'"),
     db.prepare("INSERT INTO mini_editions(run_id,stats_after,status,questions_snapshot_json) VALUES(?,?,'ACTIVE',?)")
       .bind(runId,statsAtForToday(),JSON.stringify(questions))
-  ]);
+  ];
+  try {
+    const count=await db.prepare("SELECT COUNT(*) AS n FROM mini_result_comments WHERE run_id='__draft__'").first();
+    if(Number(count?.n)===7)
+      statements.push(db.prepare("INSERT INTO mini_result_comments(run_id,score,messages_json) SELECT ?,score,messages_json FROM mini_result_comments WHERE run_id='__draft__'").bind(runId));
+  }catch(_) {/* Старый ручной запуск без миграции работает, как прежде. */}
+  await db.batch(statements);
   return {ok:true,created:true,runId};
 }
 async function adminReport(db,runId=null) {
