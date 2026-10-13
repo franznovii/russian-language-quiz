@@ -361,13 +361,87 @@ async function recordContact(env,id,firstName) {
     ON CONFLICT(telegram_id) DO UPDATE SET first_name=excluded.first_name,last_started_at=unixepoch(),active=1`)
     .bind(String(id),String(firstName||'').slice(0,80)).run();
 }
+
+async function sendAdminMenu(env,chatId,text) {
+  const keyboard={keyboard:[
+    [{text:'Подготовить выпуск'},{text:'Опубликовать выпуск'}],
+    [{text:'Статистика'},{text:'Статус'}],
+    [{text:'Скрыть меню'}]
+  ],resize_keyboard:true,is_persistent:true};
+  await telegram(env,'sendMessage',{chat_id:chatId,text,reply_markup:keyboard});
+}
+async function handleAdminCommand(env,chatId,raw) {
+  const command=raw.trim();
+  if(command==='/admin'||command==='/menu'||command==='Управление тестом')
+    return sendAdminMenu(env,chatId,'Управление тестами «вы́Читать». Сначала подготовь выпуск из таблицы. После проверки нажми «Опубликовать выпуск».');
+  if(command==='Скрыть меню')
+    return telegram(env,'sendMessage',{chat_id:chatId,
+      text:'Меню скрыто. Чтобы вернуть его, отправь /admin.',reply_markup:{remove_keyboard:true}});
+  if(command==='Подготовить выпуск'||command==='/prepare') {
+    const data=await googleBridge(env,'prepare');
+    const staged=await stageQuestions(env.DB,{questions:data.questions,comments:data.comments});
+    return sendAdminMenu(env,chatId,'Готово: из Google Sheets загружены '+staged.questionCount+
+      ' вопросов и '+staged.commentCount+' комментариев для всех баллов от 0 до 6.\n\nЭто ЧЕРНОВИК: активный выпуск пока не изменён. Для публикации нажми «Опубликовать выпуск».');
+  }
+  if(command==='Опубликовать выпуск'||command==='/publish')
+    return telegram(env,'sendMessage',{chat_id:chatId,
+      text:'В новом выпуске все участники начнут с первого вопроса. Прежние ответы сохранятся в архиве. В публичном режиме новый тест откроется сразу. Подтверждаешь?',
+      reply_markup:{keyboard:[[{text:'Да, опубликовать'}],[{text:'Отмена'}]],resize_keyboard:true,one_time_keyboard:true}});
+  if(command==='Отмена')
+    return sendAdminMenu(env,chatId,'Публикация отменена. Текущий выпуск не изменён.');
+  if(command==='Да, опубликовать') {
+    const draft=await env.DB.prepare('SELECT updated_at,questions_json FROM mini_drafts WHERE draft_id=1').first();
+    if(!draft||timestamp()-Number(draft.updated_at)>1800||timestamp()<Number(draft.updated_at))
+      throw err('Черновик старше 30 минут или отсутствует. Сначала подготовь выпуск.');
+    const n=await env.DB.prepare("SELECT COUNT(*) AS n FROM mini_result_comments WHERE run_id='__draft__'").first();
+    if(Number(n?.n)!==7)throw err('Не хватает комментариев. Нажми «Подготовить выпуск».');
+    const q=validateQuestions(JSON.parse(draft.questions_json));
+    if(!draftIsReady(q))throw err('В черновике остались тестовые вопросы.');
+    const res=await activateDraft(env.DB,false);
+    return sendAdminMenu(env,chatId,res.created
+      ?'Новый выпуск опубликован! ID: '+res.runId+'\nПрежний выпуск и ответы сохранены в архиве.'
+      :'Новый выпуск не создан: вопросы совпадают с действующими. Ничего не сброшено.');
+  }
+  if(command==='Статистика'||command==='/stats') {
+    // Берём живые ответы из D1, обновляем отчёт в Sheets и читаем сохранённые значения.
+    const report=await adminReport(env.DB);
+    const sheet=await googleBridge(env,'saveStats',{report});
+    const byQuestion=report.perQuestion.map(q=>'Вопрос '+q.questionId+': '+q.correct+
+      ' верно / '+q.incorrect+' неверно ('+q.correctPercent+'% / '+q.incorrectPercent+'%)').join('\n');
+    const dist=sheet.distribution.map((n,i)=>i+'/6: '+n).join(' · ');
+    return telegram(env,'sendMessage',{chat_id:chatId,
+      text:'Статистика выпуска\n'+sheet.runId+'\nОбновлено: '+sheet.updatedAt+' (МСК)\n\nНачали: '+sheet.started+
+        '\nЗавершили: '+sheet.completed+'\nНе завершили: '+sheet.incomplete+
+        '\nСредний балл: '+sheet.average+'\n\nПо вопросам:\n'+byQuestion+
+        '\n\nРаспределение баллов:\n'+dist+
+        '\n\nДанные сохранены в Google Sheets → «Cloudflare_Отчёт».',
+      link_preview_options:{is_disabled:true}});
+  }
+  if(command==='Статус'||command==='/status') {
+    const run=await activeEdition(env.DB);
+    const draft=await env.DB.prepare('SELECT updated_at FROM mini_drafts WHERE draft_id=1').first();
+    return telegram(env,'sendMessage',{chat_id:chatId,
+      text:'Активный выпуск: '+run.id+'\nДоступ: '+String(env.ACCESS_MODE||'pilot')+
+        '\nСтатистика после: '+statsAtLabel(run.statsAt)+' (МСК)'+
+        '\nЧерновик: '+(draft?'подготовлен '+statsAtLabel(Number(draft.updated_at)):'нет')});
+  }
+  return false;
+}
+
 async function telegramUpdate(env,update) {
   if (!Number.isSafeInteger(update?.update_id)) throw err('Некорректное обновление',400);
   const dup=await env.DB.prepare('SELECT 1 FROM processed_updates WHERE update_id=?').bind(update.update_id).first();
   if (dup) return;
   const message=update.message;
-  if (message?.chat?.type==='private'&&message.from?.id===message.chat.id&&
-      /^\/start(?:\s+[A-Za-z0-9_-]{1,64})?\s*$/.test(String(message.text||''))) {
+  const privateMessage=message?.chat?.type==='private'&&message.from?.id===message.chat.id;
+  const raw=String(message?.text||'').trim();
+  const owner=privateMessage&&String(message.from.id)===String(env.TEST_CHAT_ID||'');
+  if(owner && (['/admin','/menu','/prepare','/publish','/stats','/status',
+      'Управление тестом','Подготовить выпуск','Опубликовать выпуск',
+      'Да, опубликовать','Отмена','Статистика','Статус','Скрыть меню'].includes(raw))) {
+    try {await handleAdminCommand(env,message.chat.id,raw);}
+    catch(e){await sendAdminMenu(env,message.chat.id,'Ошибка: '+String(e.message||e).slice(0,750));}
+  } else if(privateMessage&&/^\/start(?:\s+[A-Za-z0-9_-]{1,64})?\s*$/.test(raw)) {
     await recordContact(env,message.from.id,message.from.first_name);
     const mode=String(env.ACCESS_MODE||'pilot').toLowerCase();
     let publicReady=false;
@@ -382,6 +456,7 @@ async function telegramUpdate(env,update) {
       parse_mode:'HTML',link_preview_options:{is_disabled:true},
       reply_markup:{inline_keyboard:[[{text:'Открыть тест',web_app:{url:BASE_PAGE}}]]}
     }:{chat_id:message.chat.id,text:'Новый тест по русскому языку от вы́Читать пока готовится. Когда выйдет выпуск, пришлём кнопку «Открыть тест».'});
+    if(owner) await sendAdminMenu(env,message.chat.id,'Административное меню теста.');
   }
   await env.DB.prepare('INSERT OR IGNORE INTO processed_updates(update_id) VALUES(?)').bind(update.update_id).run();
 }
