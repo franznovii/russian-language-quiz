@@ -167,7 +167,7 @@ async function googleBridge(env,action,extra={}) {
     if(!response.ok)throw err('Google Sheets: HTTP '+response.status,502);
     const bodyText=await response.text();
     let data=null;
-    try{data=JSON.parse(bodyText.replace(/^\\uFEFF/,''));}catch(_){}
+    try{data=JSON.parse(bodyText.replace(/^\uFEFF/,''));}catch(_){}
     if(data?.ok===true)return data;
     if(data?.ok===false)throw err('Google Sheets: '+String(data.error||'ошибка выполнения'),502);
     // Никогда не пишем HTML ответа GAS или секреты в логи.
