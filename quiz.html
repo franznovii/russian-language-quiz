@@ -404,7 +404,7 @@ function statisticsWhen(){
 }
 function renderFinish(){stopClock();
   el("score").textContent=String(currentState.score??0);
-  el("result-joke").textContent=jokes[currentState.score]||"Выпуск завершён.";
+  el("result-joke").textContent=currentState.resultComment||jokes[currentState.score]||"Выпуск завершён.";
   const stats=el("stats"),section=el("stats-section"),pendingBox=el("stats-pending");
   const gate=el("stats-gate");
   const message=el("subscription-status");
