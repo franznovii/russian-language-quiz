@@ -145,3 +145,14 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   letter-spacing: -.035em;
   white-space: nowrap;
 }
+
+
+/* Result screen (not share screen): do not vertically distort the photographic
+   collage when the subscription/statistics content makes this page taller.
+   The rightmost third of folk-collage.png belongs to this screen. */
+.page[data-screen="finish-screen"] .scene-art {
+  background-size: 300% auto;
+  background-position: right top;
+  background-repeat: no-repeat;
+  background-color: var(--paper);
+}
