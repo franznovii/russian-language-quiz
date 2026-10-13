@@ -76,17 +76,6 @@
   transform:translateY(-54%);
   font:400 clamp(29px,7vw,40px)/1 Georgia,serif;
 }
-.page .poster-cta.primary-btn::before,
-.page .poster-cta.primary-btn::after {
-  content:"❧";
-  pointer-events:none;
-  position:absolute;
-  font:400 clamp(19px,5vw,25px)/1 Georgia,serif;
-  color:#f4ded1;
-  opacity:.82;
-}
-.page .poster-cta.primary-btn::before {left:6px;bottom:7px;transform:rotate(-36deg)}
-.page .poster-cta.primary-btn::after {right:6px;bottom:7px;transform:rotate(36deg) scaleX(-1)}
 .page .poster-cta.primary-btn:active {filter:brightness(1.12);transform:translateY(1px)}
 .page .poster-cta.primary-btn:focus-visible {outline:3px solid #fff;outline-offset:3px}
 .page .poster-cta.primary-btn:disabled {opacity:.65;cursor:progress}
