@@ -156,13 +156,26 @@ async function googleBridge(env,action,extra={}) {
     throw err('Не настроен мост к Google Sheets (GAS_BRIDGE_URL / GAS_BRIDGE_KEY)',503);
   const u=new URL(target);
   u.searchParams.set('bot_admin','1');
-  const response=await fetch(u.toString(),{method:'POST',
-    headers:{'content-type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({action,key,...extra}),redirect:'follow'});
-  if(!response.ok)throw err('Google Sheets: HTTP '+response.status,502);
-  const data=await response.json().catch(()=>null);
-  if(!data?.ok)throw err('Google Sheets: '+String(data?.error||'некорректный ответ'),502);
-  return data;
+  // Сохранение отчёта идемпотентно: если GAS выполнил запись, но Google
+  // вернул HTML/пустой ответ вместо JSON, можно повторить запрос один раз.
+  // Операцию подготовки выпуска не повторяем, чтобы избежать побочных эффектов.
+  const attempts=action==='saveStats'?2:1;
+  for(let attempt=0;attempt<attempts;attempt++){
+    const response=await fetch(u.toString(),{method:'POST',
+      headers:{'content-type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action,key,...extra}),redirect:'follow'});
+    if(!response.ok)throw err('Google Sheets: HTTP '+response.status,502);
+    const bodyText=await response.text();
+    let data=null;
+    try{data=JSON.parse(bodyText.replace(/^\\uFEFF/,''));}catch(_){}
+    if(data?.ok===true)return data;
+    if(data?.ok===false)throw err('Google Sheets: '+String(data.error||'ошибка выполнения'),502);
+    // Никогда не пишем HTML ответа GAS или секреты в логи.
+    console.warn('GAS returned non-JSON response for '+action+
+      '; content-type='+String(response.headers.get('content-type')||'unknown').slice(0,90)+
+      '; attempt='+(attempt+1));
+  }
+  throw err('Google Sheets: некорректный ответ',502);
 }
 
 async function activeEdition(db) {
@@ -475,18 +488,33 @@ async function handleAdminCommand(env,chatId,raw) {
       :'Новый выпуск не создан: вопросы совпадают с действующими. Ничего не сброшено.');
   }
   if(command==='Статистика'||command==='/stats') {
-    // Берём живые ответы из D1, обновляем отчёт в Sheets и читаем сохранённые значения.
+    // Живые ответы берём из D1. Сбой ответа Google не должен скрывать
+    // актуальную статистику от владельца, даже если запись уже выполнилась.
     const report=await adminReport(env.DB);
-    const sheet=await googleBridge(env,'saveStats',{report});
+    let sheet=null, sheetsError=null;
+    try{sheet=await googleBridge(env,'saveStats',{report});}
+    catch(e){
+      sheetsError=e;
+      console.warn('Google Sheets report acknowledgement failed: '+String(e.message||e));
+    }
     const byQuestion=report.perQuestion.map(q=>'Вопрос '+q.questionId+': '+q.correct+
       ' верно / '+q.incorrect+' неверно ('+q.correctPercent+'% / '+q.incorrectPercent+'%)').join('\n');
-    const dist=sheet.distribution.map((n,i)=>i+'/6: '+n).join(' · ');
+    const dist=(sheet?.distribution||report.distribution).map((v,i)=>i+'/6: '+v).join(' · ');
+    const updatedAt=sheet?.updatedAt||statsAtLabel(timestamp());
+    const note=sheet
+      ?'Данные сохранены в Google Sheets → «Cloudflare_Отчёт».'
+      :'Данные рассчитаны по Cloudflare D1. Не удалось подтвердить обновление Google Sheets ('+
+        String(sheetsError?.message||'ошибка соединения')+
+        '). Проверь время обновления листа «Cloudflare_Отчёт».';
     return telegram(env,'sendMessage',{chat_id:chatId,
-      text:'Статистика выпуска\n'+sheet.runId+'\nОбновлено: '+sheet.updatedAt+' (МСК)\n\nНачали: '+sheet.started+
-        '\nЗавершили: '+sheet.completed+'\nНе завершили: '+sheet.incomplete+
-        '\nСредний балл: '+sheet.average+'\n\nПо вопросам:\n'+byQuestion+
+      text:'Статистика выпуска\n'+report.runId+
+        '\n'+(sheet?'Обновлено в таблице: ':'Рассчитано: ')+updatedAt+' (МСК)'+
+        '\n\nНачали: '+report.started+
+        '\nЗавершили: '+report.completed+'\nНе завершили: '+report.incomplete+
+        '\nСредний балл: '+(report.average===null?'—':report.average)+
+        '\n\nПо вопросам:\n'+byQuestion+
         '\n\nРаспределение баллов:\n'+dist+
-        '\n\nДанные сохранены в Google Sheets → «Cloudflare_Отчёт».',
+        '\n\n'+note,
       link_preview_options:{is_disabled:true},
       reply_markup:{inline_keyboard:[[{text:'Открыть Google-отчёт',url:'https://docs.google.com/spreadsheets/d/1A4D4fh9Bn8QO7jZGGvQsIWrTP-P36tqCKPi-IqjUWLM/edit#gid=1914646520'}]]}});
   }
