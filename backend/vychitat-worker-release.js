@@ -366,10 +366,40 @@ async function sendAdminMenu(env,chatId,text) {
   const keyboard={keyboard:[
     [{text:'Подготовить выпуск'},{text:'Опубликовать выпуск'}],
     [{text:'Статистика'},{text:'Статус'}],
+    [{text:'Сбросить моё прохождение'}],
     [{text:'Скрыть меню'}]
   ],resize_keyboard:true,is_persistent:true};
   await telegram(env,'sendMessage',{chat_id:chatId,text,reply_markup:keyboard});
 }
+
+/**
+ * Only the owner can call this through the authenticated private Telegram webhook.
+ * The short edition suffix in the confirmation prevents old confirmation buttons
+ * from accidentally clearing the results of a newly published edition.
+ * D1 batch applies all three deletes as a single transaction.
+ */
+async function resetOwnerAttempt(env,chatId,confirmedSuffix) {
+  const ownerId=String(env.TEST_CHAT_ID||'');
+  if(!/^[1-9]\d{4,19}$/.test(ownerId)||String(chatId)!==ownerId)
+    throw err('Сброс доступен только владельцу',403);
+  const run=await activeEdition(env.DB);
+  if(run.id.slice(-12)!==confirmedSuffix)
+    throw err('Выпуск изменился. Открой сброс заново, чтобы проверить активный выпуск.');
+  const tables=['mini_answers','mini_timers','mini_participants'];
+  const args=[run.id,ownerId,run.id];
+  const sql=tables.map(t=>
+    'DELETE FROM '+t+' WHERE run_id=? AND telegram_id=?'+
+    " AND EXISTS (SELECT 1 FROM mini_editions WHERE run_id=? AND status='ACTIVE')");
+  const results=await env.DB.batch(sql.map(q=>env.DB.prepare(q).bind(...args)));
+  const deleted=results.map(x=>Number(x?.meta?.changes||0));
+  return sendAdminMenu(env,chatId,
+    deleted.every(n=>n===0)
+      ?'Для текущего выпуска не найдено твоего прохождения. Можешь открыть тест.'
+      :'Твоё прохождение текущего выпуска сброшено: удалены ответы, таймеры и запись об участии.\n\n'+
+        'Закрой Mini App полностью и заново открой тест из бота. Ты снова увидишь первый вопрос.\n\n'+
+        'Ответы других участников и архив не затронуты. Если статистика на 19:00 уже разослана, её зафиксированный срез не изменится.');
+}
+
 async function handleAdminCommand(env,chatId,raw) {
   const command=raw.trim();
   if(command==='/admin'||command==='/menu'||command==='Управление тестом')
@@ -377,6 +407,23 @@ async function handleAdminCommand(env,chatId,raw) {
   if(command==='Скрыть меню')
     return telegram(env,'sendMessage',{chat_id:chatId,
       text:'Меню скрыто. Чтобы вернуть его, отправь /admin.',reply_markup:{remove_keyboard:true}});
+
+  if(command==='Сбросить моё прохождение'||command==='/resetme') {
+    const run=await activeEdition(env.DB);
+    // Echo the active edition in the confirmation button: previous confirmation
+    // messages become invalid after a new edition has been activated.
+    return telegram(env,'sendMessage',{chat_id:chatId,
+      text:'Сбросить ТОЛЬКО твоё прохождение текущего выпуска?\n\n'+
+        'Удалятся твои ответы, таймеры и запись об участии, после чего ты сможешь пройти этот же тест заново. Другие участники не пострадают.\n\n'+
+        'Никаких изменений в вопросах и самом выпуске не произойдёт.',
+      reply_markup:{keyboard:[
+        [{text:'Да, сбросить #'+run.id.slice(-12)}],
+        [{text:'Отмена'}]
+      ],resize_keyboard:true,one_time_keyboard:true}});
+  }
+  if(/^Да, сбросить #[A-Za-z0-9-]{12}$/.test(command)) {
+    return resetOwnerAttempt(env,chatId,command.slice(-12));
+  }
   if(command==='Подготовить выпуск'||command==='/prepare') {
     const data=await googleBridge(env,'prepare');
     const staged=await stageQuestions(env.DB,{questions:data.questions,comments:data.comments});
@@ -441,9 +488,11 @@ async function telegramUpdate(env,update) {
   const privateMessage=message?.chat?.type==='private'&&message.from?.id===message.chat.id;
   const raw=String(message?.text||'').trim();
   const owner=privateMessage&&String(message.from.id)===String(env.TEST_CHAT_ID||'');
-  if(owner && (['/admin','/menu','/prepare','/publish','/stats','/status',
+  if(owner && (['/admin','/menu','/prepare','/publish','/stats','/status','/resetme',
       'Управление тестом','Подготовить выпуск','Опубликовать выпуск',
-      'Да, опубликовать','Отмена','Статистика','Статус','Скрыть меню'].includes(raw))) {
+      'Да, опубликовать','Отмена','Статистика','Статус','Скрыть меню',
+      'Сбросить моё прохождение'].includes(raw)||
+      /^Да, сбросить #[A-Za-z0-9-]{12}$/.test(raw))) {
     try {await handleAdminCommand(env,message.chat.id,raw);}
     catch(e){await sendAdminMenu(env,message.chat.id,'Ошибка: '+String(e.message||e).slice(0,750));}
   } else if(privateMessage&&/^\/start(?:\s+[A-Za-z0-9_-]{1,64})?\s*$/.test(raw)) {
