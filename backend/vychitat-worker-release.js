@@ -348,7 +348,7 @@ async function share(env,run,user) {
   const score=ans.filter(x=>x.correct).length;
   // Выбираем ту же формулировку, что stateFor выводит на экране результата.
   const resultComment=await resultTextForScore(env.DB,run,user,score);
-  const text=`${escapeTelegramHTML(resultComment)}\n\nЭто мой результат в тесте канала <a href="https://t.me/posttsop">вы́Читать</a> по русскому языку. Я набрал <b>${score} из 6</b>.\nА ты справишься лучше?`;
+  const text=`<i>${escapeTelegramHTML(resultComment)}</i>\n\nЭто мой результат в тесте канала <a href="https://t.me/posttsop">вы́Читать</a> по русскому языку. Я набрал <b>${score} из 6</b>.\nА ты справишься лучше?`;
   const record=await telegram(env,'savePreparedInlineMessage',{
     user_id:user.id,result:{type:'article',id:crypto.randomUUID().replaceAll('-',''),title:'Мой результат в тесте вы́Читать',
       input_message_content:{message_text:text,parse_mode:'HTML',link_preview_options:{is_disabled:true}},
