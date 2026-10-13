@@ -503,8 +503,11 @@ async function shareResult(){
     // Старый Telegram: ссылки будут видны как URL — share/url не поддерживает
     // встроенные ссылки, используем его только как резервный вариант.
     const score=Number(currentState.score)||0;
-    const message="Я набрал "+score+" из 6 в тесте канала вы́Читать по русскому языку.\n"+
-      "Канал: https://t.me/posttsop\nА ты справишься лучше?";
+    const resultComment=String(currentState.resultComment||jokes[score]||"Выпуск завершён.");
+    const message="Я набрал "+score+" из 6 в тесте канала вы́Читать по русскому языку.\n\n"+
+      resultComment;
+    // В устаревших версиях Telegram share/url не поддерживает inline-кнопки:
+    // оставляем одну ссылку на тест, а комментарий берём из того же state.
     const share="https://t.me/share/url?url="+
       encodeURIComponent("https://t.me/posttsop_test_bot?start=quiz")+
       "&text="+encodeURIComponent(message);
