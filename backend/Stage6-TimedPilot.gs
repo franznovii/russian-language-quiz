@@ -1033,6 +1033,9 @@ function miniSaveBotContact_(id, name) {
  * Для других сообщений и групп ничего не делаем.
  */
 function doPost(e) {
+  // Отдельный административный мост; прежний Telegram launcher не затронут.
+  if (e && String(e.parameter?.bot_admin || '') === '1')
+    return miniBotGatewayHandle_(e);
   // HTML-ответ вместо ContentService: исключаем лишний 302-редирект
   // при доставке Telegram webhook на Google Apps Script.
   const response=()=>HtmlService.createHtmlOutput("ok");
