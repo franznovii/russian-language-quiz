@@ -439,7 +439,7 @@ async function handleAdminCommand(env,chatId,raw) {
       text:'В новом выпуске все участники начнут с первого вопроса. Прежние ответы сохранятся в архиве. В публичном режиме новый тест откроется сразу. Подтверждаешь?',
       reply_markup:{keyboard:[[{text:'Да, опубликовать'}],[{text:'Отмена'}]],resize_keyboard:true,one_time_keyboard:true}});
   if(command==='Отмена')
-    return sendAdminMenu(env,chatId,'Публикация отменена. Текущий выпуск не изменён.');
+    return sendAdminMenu(env,chatId,'Действие отменено. Ничего не изменено.');
   if(command==='Да, опубликовать') {
     const draft=await env.DB.prepare('SELECT updated_at,questions_json FROM mini_drafts WHERE draft_id=1').first();
     if(!draft||timestamp()-Number(draft.updated_at)>1800||timestamp()<Number(draft.updated_at))
