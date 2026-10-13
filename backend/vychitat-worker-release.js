@@ -131,6 +131,25 @@ async function commentForResult(db,run,user,score) {
     return null;
   }
 }
+// Один источник текста для экрана результата и сообщения другу.
+// Для исторических выпусков без сохранённых в D1 комментариев оставляем
+// прежние семь формулировок Mini App.
+const DEFAULT_RESULT_JOKES = Object.freeze([
+  'Ты последовательно отстаивал альтернативную орфографию.',
+  'Один правильный ответ. Остальные пока в авторской редакции.',
+  'Между тобой и русским языком есть искра. Пока в основном от трения.',
+  'Половина тебя — корректор. Вторая половина мешает ему работать.',
+  'Две ошибки оставлены специально, чтобы редактору было чем заняться.',
+  'Одна ошибка — это уже не безграмотность, а сюжетный поворот.',
+  'Всё правильно. Теперь можешь исправлять админа.'
+]);
+async function resultTextForScore(db,run,user,score) {
+  return await commentForResult(db,run,user,score) || DEFAULT_RESULT_JOKES[score] || 'Выпуск завершён.';
+}
+function escapeTelegramHTML(value) {
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 async function googleBridge(env,action,extra={}) {
   const target=String(env.GAS_BRIDGE_URL||'').trim(),key=String(env.GAS_BRIDGE_KEY||'');
   if(!target.startsWith('https://script.google.com/macros/s/')||!target.endsWith('/exec')||key.length<32)
@@ -185,7 +204,7 @@ async function stateFor(db,run,user) {
   const timer=next?await currentTimer(db,run,user,next):null;
   const complete=answers.length===QCOUNT;
   const statsReady=complete && timestamp()>=run.statsAt;
-  const resultComment=complete?await commentForResult(db,run,user,answers.filter(a=>a.correct).length):null;
+  const resultComment=complete?await resultTextForScore(db,run,user,answers.filter(a=>a.correct).length):null;
   return {ok:true,userName:String(user.first_name||'Участник').slice(0,80),runId:run.id,
     questions:run.questions.map((q,index)=>(index>answers.length||(index===answers.length&&!timer))?null:
       {id:q.id,text:q.text,description:q.description,options:q.options,multiple:q.correct.length>1,timeSeconds:q.timeSeconds}),
@@ -327,11 +346,13 @@ async function share(env,run,user) {
   const ans=await answersFor(env.DB,run,user);
   if (ans.length!==6) throw err('Сначала заверши все шесть вопросов');
   const score=ans.filter(x=>x.correct).length;
-  const text=`Я набрал <b>${score} из 6</b> в тесте канала <a href="https://t.me/posttsop">вы́Читать</a> по русскому языку.\nА ты справишься лучше?\n\n<a href="${BOT_LINK}">Пройти тест</a>`;
+  // Выбираем ту же формулировку, что stateFor выводит на экране результата.
+  const resultComment=await resultTextForScore(env.DB,run,user,score);
+  const text=`Я набрал <b>${score} из 6</b> в тесте канала <a href="https://t.me/posttsop">вы́Читать</a> по русскому языку.\n\n<i>${escapeTelegramHTML(resultComment)}</i>`;
   const record=await telegram(env,'savePreparedInlineMessage',{
     user_id:user.id,result:{type:'article',id:crypto.randomUUID().replaceAll('-',''),title:'Мой результат в тесте вы́Читать',
       input_message_content:{message_text:text,parse_mode:'HTML',link_preview_options:{is_disabled:true}},
-      reply_markup:{inline_keyboard:[[{text:'Открыть тест',url:BOT_LINK}]]}},
+      reply_markup:{inline_keyboard:[[{text:'Проверить себя',url:BOT_LINK}]]}},
     allow_user_chats:true,allow_group_chats:true,allow_bot_chats:false,allow_channel_chats:false
   });
   return {ok:true,shareId:record.id};
