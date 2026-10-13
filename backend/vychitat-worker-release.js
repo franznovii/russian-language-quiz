@@ -380,8 +380,12 @@ async function handleAdminCommand(env,chatId,raw) {
   if(command==='Подготовить выпуск'||command==='/prepare') {
     const data=await googleBridge(env,'prepare');
     const staged=await stageQuestions(env.DB,{questions:data.questions,comments:data.comments});
+    const preview=data.questions.map(q=>q.id+'. '+q.text.slice(0,125)).join('\n');
+    const variants=data.comments.map((v,i)=>i+'/6 — '+v.length).join(' · ');
     return sendAdminMenu(env,chatId,'Готово: из Google Sheets загружены '+staged.questionCount+
-      ' вопросов и '+staged.commentCount+' комментариев для всех баллов от 0 до 6.\n\nЭто ЧЕРНОВИК: активный выпуск пока не изменён. Для публикации нажми «Опубликовать выпуск».');
+      ' вопросов и '+staged.commentCount+' комментариев.\n\nВОПРОСЫ:\n'+preview+
+      '\n\nКОММЕНТАРИИ:\n'+variants+
+      '\n\nЭто ЧЕРНОВИК: текущий выпуск не изменён. Для публикации нажми «Опубликовать выпуск».');
   }
   if(command==='Опубликовать выпуск'||command==='/publish')
     return telegram(env,'sendMessage',{chat_id:chatId,
@@ -415,7 +419,8 @@ async function handleAdminCommand(env,chatId,raw) {
         '\nСредний балл: '+sheet.average+'\n\nПо вопросам:\n'+byQuestion+
         '\n\nРаспределение баллов:\n'+dist+
         '\n\nДанные сохранены в Google Sheets → «Cloudflare_Отчёт».',
-      link_preview_options:{is_disabled:true}});
+      link_preview_options:{is_disabled:true},
+      reply_markup:{inline_keyboard:[[{text:'Открыть Google-отчёт',url:'https://docs.google.com/spreadsheets/d/1A4D4fh9Bn8QO7jZGGvQsIWrTP-P36tqCKPi-IqjUWLM/edit#gid=1914646520'}]]}});
   }
   if(command==='Статус'||command==='/status') {
     const run=await activeEdition(env.DB);
