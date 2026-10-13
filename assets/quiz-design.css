@@ -136,3 +136,12 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   background-position: right top;
   background-repeat: no-repeat;
 }
+
+/* Only the share card: keep “РЕЗУЛЬТАТ” clear of the model's face. */
+.page[data-screen="share-screen"] .share-card h1 .hero-accent {
+  display: inline-block;
+  font-size: clamp(28px, 8vw, 32px);
+  line-height: 1.02;
+  letter-spacing: -.035em;
+  white-space: nowrap;
+}
