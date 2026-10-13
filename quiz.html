@@ -56,6 +56,7 @@
   white-space:pre-line;
 }
 </style>
+<link rel="stylesheet" href="./assets/intro-poster.css?v=20261013-poster-1">
 </head>
 <body>
 <div class="page" data-screen="connect-screen">
@@ -63,23 +64,24 @@
 <div class="scene-art" aria-hidden="true"></div>
 
   <main>
-    <section class="mini-screen" id="connect-screen">
-      <div class="eyebrow"><span class="eyebrow-line"></span> Мини-тест по русскому языку</div>
-      <h1>Русский<br><span class="hero-accent">на практике.</span></h1>
-      <p class="lead">Шесть вопросов,<br>чтобы проверить себя<br>и вспомнить главное.</p>
-      <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
-      <p class="resume">На вопрос по умолчанию даётся 60 секунд. Время может отличаться для разных заданий. Таймер не останавливается при закрытии приложения.</p>
-      <button class="primary-btn" id="connect-btn" type="button">Открыть тест <span aria-hidden="true">→</span></button>
-      <div class="loader" id="connect-status" role="status" aria-live="polite"></div>
+        <section class="mini-screen poster-screen" id="connect-screen">
+      <div class="poster-artwork"><img src="./assets/intro-poster-art.webp" alt="вы́Читать. Русский на практике. Шесть вопросов, чтобы проверить себя и вспомнить главное." width="941" height="1384" fetchpriority="high"></div>
+      <div class="poster-controls">
+        <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
+        <button class="primary-btn poster-cta" id="connect-btn" type="button"><span class="poster-cta-text">Пройти тест</span><span class="poster-cta-arrow" aria-hidden="true">→</span></button>
+        <div class="loader poster-status" id="connect-status" role="status" aria-live="polite"></div>
+        <div class="poster-meta"><span>6 вопросов</span><span class="poster-dot">·</span><span>таймер на вопрос</span><span class="poster-dot">·</span><span>статистика после 19:00</span></div>
+      </div>
     </section>
 
-    <section class="mini-screen" id="intro-screen" hidden>
-      <div class="eyebrow"><span class="eyebrow-line"></span> Тест по русскому языку</div>
-      <h1 class="intro-title"><span class="intro-title-red">Русский</span><br>на практике</h1>
-      <p class="lead" id="intro-greeting"></p>
-      <div class="intro-facts"><span>6 вопросов</span><span>Таймер на вопрос</span><span>Одна попытка</span></div>
-      <p class="resume" id="resume-text"></p>
-      <button class="primary-btn" id="begin-btn" type="button">Начать <span aria-hidden="true">↗</span></button>
+        <section class="mini-screen poster-screen" id="intro-screen" hidden>
+      <div class="poster-artwork"><img src="./assets/intro-poster-art.webp" alt="вы́Читать. Русский на практике. Шесть вопросов, чтобы проверить себя и вспомнить главное." width="941" height="1384"></div>
+      <p class="poster-sr-only" id="intro-greeting"></p>
+      <div class="poster-controls">
+        <p class="poster-resume" id="resume-text" role="status"></p>
+        <button class="primary-btn poster-cta" id="begin-btn" type="button"><span class="poster-cta-text">Пройти тест</span><span class="poster-cta-arrow" aria-hidden="true">→</span></button>
+        <div class="poster-meta"><span>6 вопросов</span><span class="poster-dot">·</span><span>таймер на вопрос</span><span class="poster-dot">·</span><span>статистика после 19:00</span></div>
+      </div>
     </section>
 
     <section class="mini-screen" id="question-screen" hidden>
@@ -269,8 +271,9 @@ function showInitialState(){
     return;
   }
   el("intro-greeting").textContent="Шесть вопросов, чтобы проверить себя и вспомнить главное.";
-  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить»." : "Отсчёт начнётся,\nкогда откроешь\nпервый вопрос";
-  el("begin-btn").firstChild.textContent=n?"Продолжить тест ":"Начать тест ";
+  el("resume-text").textContent=n ? "Ты уже ответил на "+n+" из 6 вопросов. Следующий таймер начнётся, когда нажмёшь «Продолжить тест»." : "";
+  el("intro-screen").classList.toggle("has-progress",n>0);
+  el("begin-btn").querySelector(".poster-cta-text").textContent=n?"Продолжить тест":"Пройти тест";
   show("intro-screen");
 }
 async function beginQuestion(){
@@ -282,6 +285,7 @@ async function beginQuestion(){
     renderQuestion();
   }catch(e){
     el("resume-text").textContent="Ошибка: "+String(e.message||e);
+    el("intro-screen").classList.add("has-progress");
   }finally{el("begin-btn").disabled=false}
 }
 function renderQuestion(){
@@ -292,6 +296,7 @@ function renderQuestion(){
   const q=currentState.questions[currentIndex];
   if(!q){
     logError("resume-text","Следующий вопрос ещё не открыт. Нажми «Продолжить тест».");
+    el("intro-screen").classList.add("has-progress");
     show("intro-screen");return
   }
   el("question-count").textContent="Вопрос "+q.id+"/6";

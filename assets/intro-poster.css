@@ -1,0 +1,153 @@
+/* wyChitat: poster-based opening; other Mini App screens are unchanged. */
+.page[data-screen="connect-screen"],
+.page[data-screen="intro-screen"] {
+  --poster-black:#141110;
+  background:var(--poster-black);
+  padding:0!important;
+  color:#f5f0e7;
+  min-height:100svh;
+}
+.page[data-screen="connect-screen"] .site-header,
+.page[data-screen="intro-screen"] .site-header,
+.page[data-screen="connect-screen"] .scene-art,
+.page[data-screen="intro-screen"] .scene-art {display:none!important}
+.page[data-screen="connect-screen"] main,
+.page[data-screen="intro-screen"] main {width:100%;margin:0;padding:0}
+.page #connect-screen.poster-screen,
+.page #intro-screen.poster-screen {
+  padding:0!important;
+  margin:0;
+  min-height:100svh;
+  min-height:var(--tg-viewport-stable-height,100svh);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  background:#141110;
+}
+.poster-artwork {width:100%;overflow:hidden;flex:0 1 auto;line-height:0;background:#181514}
+.poster-artwork img {
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:calc(100svh - 110px);
+  object-fit:cover;
+  object-position:center top;
+}
+.poster-controls {
+  flex:0 0 auto;
+  margin-top:auto;
+  padding:13px 6.65% max(16px,env(safe-area-inset-bottom));
+  width:100%;
+  background:linear-gradient(180deg,#151111 0%,#171313 15%,#101010 100%);
+}
+.page .poster-cta.primary-btn {
+  position:relative;
+  isolation:isolate;
+  box-sizing:border-box;
+  width:100%;
+  min-height:clamp(55px,14.7vw,72px);
+  margin:0!important;
+  padding:8px clamp(30px,10%,46px);
+  border:2px solid #eee4d2;
+  border-radius:clamp(17px,4vw,23px);
+  color:#fff8eb;
+  background:
+    repeating-linear-gradient(24deg,rgba(255,255,255,.033) 0 1px,transparent 1px 12px),
+    radial-gradient(ellipse at 30% 30%,#c6221d 0%,#ad100e 56%,#900d0b 100%);
+  box-shadow:0 0 0 1px #380d0a, inset 0 0 0 2px rgba(255,255,255,.12);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  text-align:center;
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  letter-spacing:-.025em;
+  font-size:clamp(25px,6.8vw,34px);
+  line-height:1.15;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.page .poster-cta.primary-btn .poster-cta-text {flex:1;white-space:nowrap;text-align:center}
+.page .poster-cta.primary-btn .poster-cta-arrow {
+  position:absolute;
+  right:clamp(19px,5.6vw,32px);
+  top:50%;
+  transform:translateY(-54%);
+  font:400 clamp(29px,7vw,40px)/1 Georgia,serif;
+}
+.page .poster-cta.primary-btn::before,
+.page .poster-cta.primary-btn::after {
+  content:"❧";
+  pointer-events:none;
+  position:absolute;
+  font:400 clamp(19px,5vw,25px)/1 Georgia,serif;
+  color:#f4ded1;
+  opacity:.82;
+}
+.page .poster-cta.primary-btn::before {left:6px;bottom:7px;transform:rotate(-36deg)}
+.page .poster-cta.primary-btn::after {right:6px;bottom:7px;transform:rotate(36deg) scaleX(-1)}
+.page .poster-cta.primary-btn:active {filter:brightness(1.12);transform:translateY(1px)}
+.page .poster-cta.primary-btn:focus-visible {outline:3px solid #fff;outline-offset:3px}
+.page .poster-cta.primary-btn:disabled {opacity:.65;cursor:progress}
+.poster-meta {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  margin-top:16px;
+  color:#e9e3de;
+  font:400 clamp(10px,2.65vw,12px)/1.3 Georgia,"Times New Roman",serif;
+  white-space:nowrap;
+  text-align:center;
+}
+.poster-meta::before,
+.poster-meta::after {
+  content:"";
+  height:1px;
+  flex:1 1 20px;
+  min-width:7px;
+  background:linear-gradient(to right,transparent,#b9a190);
+  opacity:.65;
+}
+.poster-meta::after {transform:scaleX(-1)}
+.poster-meta .poster-dot{opacity:.8}
+.poster-resume {
+  display:none;
+  margin:0 0 11px;
+  padding:10px 12px;
+  color:#fff3e8;
+  background:rgba(0,0,0,.8);
+  font:14px/1.4 Georgia,serif;
+  border-left:2px solid #c8322a;
+  white-space:pre-line;
+}
+#intro-screen.has-progress .poster-resume {display:block}
+.poster-screen .poster-status {
+  color:#fff0e7;
+  font:13px/1.45 Georgia,serif;
+  margin:9px 0 0;
+  min-height:0;
+}
+.poster-screen .poster-status:empty {display:none}
+.poster-screen .poster-status.status-error {color:#ffbbb4}
+.poster-screen .notice {
+  color:#281e1d;
+  margin:0 0 12px;
+  border:1px solid #bb9f8d;
+  background:#f5efe3;
+}
+.poster-sr-only {position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+@media(max-width:345px){
+  .poster-controls{padding-left:5%;padding-right:5%}
+  .poster-meta{gap:5px;font-size:9px}
+  .page .poster-cta.primary-btn{font-size:23px}
+}
+@media(max-height:630px){
+  .poster-artwork img{max-height:calc(100svh - 112px)}
+  .poster-controls{padding-top:8px;padding-bottom:11px}
+  .poster-meta{margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page .poster-cta.primary-btn {transition:none!important}
+}
