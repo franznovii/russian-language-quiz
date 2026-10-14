@@ -129,7 +129,8 @@
         <img class="card-logo" src="./assets/vychitat-logo.png" alt="вы́Читать">
         <h1>Мой<br><span class="hero-accent">результат</span></h1>
         <div class="big-result"><span id="share-score">0</span> <small>из 6</small></div>
-        <p>в тесте по русскому языку<br>в канале вы́Читать</p>
+        <p id="share-comment" class="share-comment" aria-live="polite"></p>
+        <p class="share-subtitle">в тесте по русскому языку<br>в канале вы́Читать</p>
       </div>
       <button class="primary-btn" id="share-send-btn" type="button">Поделиться в Telegram <span>↗</span></button>
       <button class="secondary-mini-btn" id="share-back-btn" type="button">Назад к результату</button>
@@ -519,7 +520,16 @@ async function shareResult(){
 }
 el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
 el("check-subscription-btn").addEventListener("click",checkSubscription);
-el("share-result-btn").addEventListener("click",()=>{el("share-score").textContent=String(currentState.score??0);show("share-screen")});
+el("share-result-btn").addEventListener("click",()=>{
+  const score=Number(currentState?.score)||0;
+  const comment=String(currentState?.resultComment||jokes[score]||"Выпуск завершён.");
+  el("share-score").textContent=String(score);
+  const caption=el("share-comment");
+  caption.textContent=comment;
+  caption.classList.toggle("is-long",comment.length>115);
+  caption.classList.toggle("is-very-long",comment.length>200);
+  show("share-screen");
+});
 el("share-send-btn").addEventListener("click",shareResult);
 el("view-stats-btn").addEventListener("click",()=>show("statistics-screen"));
 ["stats-back-btn","share-back-btn","completed-result-btn"].forEach(id=>el(id).addEventListener("click",renderFinish));
