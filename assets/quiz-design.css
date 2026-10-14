@@ -137,6 +137,44 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   background-repeat: no-repeat;
 }
 
+/* Match the personalized score comment from the finish screen.
+   Keep the artwork's 505:719 proportion and reserve the portrait on the right. */
+.page[data-screen="share-screen"] .share-card .share-comment {
+  position:relative;
+  z-index:1;
+  max-width:72%;
+  margin:9px 0 7px -7px;
+  padding:6px 7px;
+  background:rgba(238,234,227,.91);
+  color:var(--ink);
+  font:clamp(12px,3.5vw,16px)/1.29 Georgia,"Times New Roman",serif;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
+}
+.page[data-screen="share-screen"] .share-card .share-comment.is-long{
+  font-size:clamp(11px,3vw,13px);
+  line-height:1.23;
+}
+.page[data-screen="share-screen"] .share-card .share-comment.is-very-long{
+  font-size:11px;
+  line-height:1.15;
+}
+.page[data-screen="share-screen"] .share-card .share-subtitle{
+  position:relative;
+  z-index:1;
+  max-width:70%;
+  font-size:11px;
+  margin:6px 0 0 -7px;
+  padding:4px 7px;
+  background:rgba(238,234,227,.85);
+}
+@media(max-width:350px){
+  .page[data-screen="share-screen"] .share-card .share-comment{
+    font-size:12px;
+    line-height:1.22;
+  }
+}
+
 /* Only the share card: keep “РЕЗУЛЬТАТ” clear of the model's face. */
 .page[data-screen="share-screen"] .share-card h1 .hero-accent {
   display: inline-block;
