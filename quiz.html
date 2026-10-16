@@ -567,16 +567,19 @@ async function buildStoryPoster() {
   ctx.fillText("вы́Читать · t.me/posttsop",540,1770);
   ctx.font="24px Georgia,serif";
   ctx.fillText("Русский на практике",540,1810);
-  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
-  if(!blob||blob.size<500)throw new Error("Не удалось сохранить карточку в PNG.");
-  if(blob.size>6*1024*1024)throw new Error("Картинка получилась слишком большой для сториз.");
-  return blob;
+  // D1 has a 2 MB per-row limit: save a compressed JPEG instead of PNG.
+  // Preserve the 1080×1920 visual and retry at lower quality if needed.
+  for(const quality of [0.86,0.77,0.68,0.56,0.45]){
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",quality));
+    if(blob&&blob.size>=500&&blob.size<=700000)return blob;
+  }
+  throw new Error("Картинка получилась слишком большой. Попробуй открыть Mini App заново.");
 }
 async function uploadStoryPoster(blob) {
   if(!telegram?.initData)throw new Error("Открой тест внутри Telegram.");
   const form=new FormData();
   form.append("initData",telegram.initData);
-  form.append("image",blob,"vychitat-result.png");
+  form.append("image",blob,"vychitat-result.jpg");
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),30000);
   try{
