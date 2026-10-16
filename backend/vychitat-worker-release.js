@@ -601,6 +601,13 @@ async function activateDraft(db,force=false) {
     if(Number(count?.n)===7)
       statements.push(db.prepare("INSERT INTO mini_result_comments(run_id,score,messages_json) SELECT ?,score,messages_json FROM mini_result_comments WHERE run_id='__draft__'").bind(runId));
   }catch(_) {/* Старый ручной запуск без миграции работает, как прежде. */}
+  // С каждым действительно новым выпуском стираем только временные
+  // изображения сториз. Участники, ответы, архив и статистика не затрагиваются.
+  // CREATE TABLE IF NOT EXISTS безопасен, даже если никто ещё не делился сториз.
+  await db.exec(STORY_TABLE_SQL);
+  // Удаление включено в ту же D1-транзакцию, что и активация выпуска:
+  // если публикация не состоится, прежние изображения не исчезнут.
+  statements.push(db.prepare("DELETE FROM mini_story_cards"));
   await db.batch(statements);
   return {ok:true,created:true,runId};
 }
