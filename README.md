@@ -7,7 +7,7 @@
 
 Mini App умеет создавать PNG 1080 × 1920 из персональной карточки и открывать редактор Telegram Stories с ссылкой на канал «вы́Читать». Встроенная библиотека html2canvas хранится локально в `assets/vendor/`.
 
-Чтобы включить это в действующем боте, один раз создай приватный Cloudflare R2 bucket и подключи его binding `STORY_R2` к Worker `vychitat`; затем разверни обновлённый `backend/vychitat-worker-release.js`. **Все шаги без командной строки:** [пошаговое подключение Telegram Stories](backend/TELEGRAM-STORIES-SETUP-2026-10-16.md).
+Для включения **не нужны банковская карта, R2 или новые привязки**. Персональные JPEG-картинки до 700 КБ временно хранятся в уже подключённой Cloudflare D1; служебная таблица `mini_story_cards` создаётся автоматически. Требуется только обновить код Worker `vychitat` из `backend/vychitat-worker-release.js`. **Все шаги без командной строки:** [пошаговое подключение Telegram Stories](backend/TELEGRAM-STORIES-SETUP-2026-10-16.md).
 
 ## Ссылки
 - **Финальный интерфейс:** https://franznovii.github.io/russian-language-quiz/quiz.html
