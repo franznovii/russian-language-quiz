@@ -742,6 +742,61 @@ async function adminAction(env,body) {
   }
 }
 
+
+/* Telegram story media: private R2 storage, public unguessable HTTPS URLs.
+ * Only users with a completed attempt can upload their own poster.
+ * No additional D1 tables, public bucket domain or secrets are required.
+ */
+const STORY_MAX_BYTES=6*1024*1024;
+function storyErrorResponse(e,origin) {
+  const status=Number.isInteger(e?.status)?e.status:500;
+  return replyJSON({ok:false,error:status>=500?'Не удалось подготовить сториз. Попробуй позже.':String(e.message||'Ошибка')},status,origin);
+}
+async function uploadStoryPoster(request,env,origin) {
+  if(!ORIGINS.has(origin))throw err('Недоверенное приложение',403);
+  if(!env.STORY_R2)throw err('Хранилище сториз ещё не подключено. Попроси администратора проверить STORY_R2.',503);
+  if(!String(request.headers.get('content-type')||'').toLowerCase().startsWith('multipart/form-data'))
+    throw err('Неверный формат изображения',415);
+  const declared=Number(request.headers.get('content-length')||0);
+  if(declared>STORY_MAX_BYTES+50000)throw err('Слишком большая картинка',413);
+  const form=await request.formData();
+  const user=await telegramUser(form.get('initData'),env.BOT_TOKEN);
+  const run=await activeEdition(env.DB);
+  if(isPilot(env)&&String(user.id)!==String(env.TEST_CHAT_ID||''))throw err('Выпуск доступен только администратору',403);
+  if(isPublic(env)&&!draftIsReady(run.questions))throw err('Выпуск готовится',503);
+  const answers=await answersFor(env.DB,run,user);
+  if(answers.length!==QCOUNT)throw err('Сначала закончи тест, чтобы поделиться результатом',403);
+  const file=form.get('image');
+  if(!(file instanceof File)||file.size<500||file.size>STORY_MAX_BYTES||file.type!=='image/png')
+    throw err('Нужна PNG-картинка размером не больше 6 МБ',413);
+  const buffer=await file.arrayBuffer();
+  const bytes=new Uint8Array(buffer);
+  const pngHeader=[137,80,78,71,13,10,26,10];
+  if(pngHeader.some((byte,i)=>bytes[i]!==byte)||new DataView(buffer).getUint32(16)!==1080||
+      new DataView(buffer).getUint32(20)!==1920)
+    throw err('Некорректная карточка сториз (ожидается 1080×1920 PNG)',422);
+  // Random URL keeps the private per-user image unguessable.
+  const key='stories/'+crypto.randomUUID().replaceAll('-','')+'.png';
+  await env.STORY_R2.put(key,buffer,{
+    httpMetadata:{contentType:'image/png'},
+    customMetadata:{edition:run.id.slice(0,120),expires:'30d'},
+  });
+  return {ok:true,url:new URL('/story-media/'+key.split('/')[1],request.url).toString()};
+}
+async function serveStoryPoster(request,env,name) {
+  if(!env.STORY_R2)return new Response('Not available',{status:503});
+  if(!/^[a-f0-9]{32}\.png$/.test(name))return new Response('Not found',{status:404});
+  const key='stories/'+name;
+  const image=request.method==='HEAD'?await env.STORY_R2.head(key):await env.STORY_R2.get(key);
+  if(!image)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+  const headers=new Headers({
+    'content-type':'image/png','cache-control':'public, max-age=86400',
+    'content-disposition':'inline; filename="vychitat-result.png"',
+    'x-content-type-options':'nosniff','etag':image.httpEtag
+  });
+  return new Response(request.method==='HEAD'?null:image.body,{status:200,headers});
+}
+
 export default {
   async fetch(request,env) {
     const url=new URL(request.url),origin=request.headers.get('origin')||'';
@@ -749,9 +804,18 @@ export default {
       try {const r=await env.DB.prepare('SELECT 1 AS ok').first();return new Response(r?.ok===1?'vychitat Mini App: Worker + D1 OK':'Database error', {status:r?.ok===1?200:503,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});}
       catch { return new Response('Database connection failed',{status:503}); }
     }
-    if (request.method==='OPTIONS'&&url.pathname==='/api') {
+    if ((request.method==='GET'||request.method==='HEAD')&&url.pathname.startsWith('/story-media/')) {
+      try{return await serveStoryPoster(request,env,url.pathname.slice('/story-media/'.length));}
+      catch(e){console.error('Story media:',String(e.message));return new Response('Media unavailable',{status:503});}
+    }
+    if(request.method==='OPTIONS'&&['/api','/story-upload'].includes(url.pathname)) {
       return new Response(null,{status:204,headers:{'access-control-allow-origin':ORIGINS.has(origin)?origin:'null',
-        'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'3600','vary':'Origin'}});
+        'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'content-type',
+        'access-control-max-age':'3600','vary':'Origin'}});
+    }
+    if(request.method==='POST'&&url.pathname==='/story-upload') {
+      try{return replyJSON(await uploadStoryPoster(request,env,origin),200,origin);}
+      catch(e){console.error('Story upload:',String(e.message));return storyErrorResponse(e,origin);}
     }
     if (request.method!=='POST'||!['/api','/admin','/telegram'].includes(url.pathname)) return new Response('Not found',{status:404});
     if (url.pathname==='/api'&&!ORIGINS.has(origin)) return replyJSON({ok:false,error:'Запрос из недоверенного приложения'},403);
