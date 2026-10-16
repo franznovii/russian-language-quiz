@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#eeeae3">
   <title>вы́Читать — Тест по русскому языку</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="./assets/vendor/html2canvas.min.js" defer></script>
   <link rel="stylesheet" href="./assets/quiz-design.css?v=share-comment-20261014">
 <style>
 /* DESIGN REVISION 2: clean controls. Screenshots of the original art included
@@ -132,7 +133,10 @@
         <p id="share-comment" class="share-comment" aria-live="polite"></p>
         <p class="share-subtitle">в тесте по русскому языку<br>в канале вы́Читать</p>
       </div>
+      <p class="share-owner-copy">Мой результат в тесте канала вы́Читать. А ты справишься лучше?</p>
       <button class="primary-btn" id="share-send-btn" type="button">Поделиться в Telegram <span>↗</span></button>
+      <button class="secondary-mini-btn" id="share-story-btn" type="button">Поделиться в сториз <span aria-hidden="true">↗</span></button>
+      <p id="share-story-status" class="share-story-status" role="status" aria-live="polite"></p>
       <button class="secondary-mini-btn" id="share-back-btn" type="button">Назад к результату</button>
     </section>
     <section class="mini-screen" id="completed-screen" hidden>
@@ -518,6 +522,112 @@ async function shareResult(){
     button.textContent=label;
   }
 }
+
+/* The image for Stories is generated from the same live .share-card preview.
+ * All assets (including html2canvas) are self-hosted on GitHub Pages.
+ * R2 remains private and is only accessed through the authenticated Worker.
+ */
+const STORY_COPY="Мой результат в тесте канала вы́Читать. А ты справишься лучше?";
+const STORY_CHANNEL_URL="https://t.me/posttsop";
+const STORY_UPLOAD_URL="https://vychitat.fr-novii.workers.dev/story-upload";
+
+async function buildStoryPoster() {
+  if(typeof window.html2canvas!=="function")
+    throw new Error("Не загрузился модуль создания картинки. Перезапусти Mini App.");
+  const card=document.querySelector("#share-screen .share-card");
+  if(!card||!currentState?.complete)throw new Error("Карточка результата пока недоступна.");
+  // The card's visible screenshot must match the comment currently on screen.
+  if(document.fonts?.ready)await document.fonts.ready;
+  const logo=card.querySelector("img.card-logo");
+  if(logo && !logo.complete)await new Promise((resolve,reject)=>{
+    logo.addEventListener("load",resolve,{once:true});
+    logo.addEventListener("error",()=>reject(new Error("Логотип не загрузился.")),{once:true});
+  });
+  const cardCanvas=await window.html2canvas(card,{
+    scale:2,backgroundColor:"#eeeae3",useCORS:true,allowTaint:false,
+    logging:false,imageTimeout:15000
+  });
+  if(!cardCanvas.width||!cardCanvas.height)throw new Error("Не удалось получить изображение результата.");
+  const canvas=document.createElement("canvas");
+  canvas.width=1080;
+  canvas.height=1920;
+  const ctx=canvas.getContext("2d",{alpha:false});
+  if(!ctx)throw new Error("Этот телефон не поддерживает создание изображения.");
+  ctx.fillStyle="#eeeae3";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const width=996;
+  const height=Math.min(1580,width*cardCanvas.height/cardCanvas.width);
+  const x=(canvas.width-width)/2;
+  const y=116;
+  ctx.drawImage(cardCanvas,x,y,width,height);
+  // A visible reference for viewers who cannot post a clickable story link.
+  ctx.fillStyle="#181818";
+  ctx.textAlign="center";
+  ctx.font="31px Georgia,serif";
+  ctx.fillText("вы́Читать · t.me/posttsop",540,1770);
+  ctx.font="24px Georgia,serif";
+  ctx.fillText("Русский на практике",540,1810);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+  if(!blob||blob.size<500)throw new Error("Не удалось сохранить карточку в PNG.");
+  if(blob.size>6*1024*1024)throw new Error("Картинка получилась слишком большой для сториз.");
+  return blob;
+}
+async function uploadStoryPoster(blob) {
+  if(!telegram?.initData)throw new Error("Открой тест внутри Telegram.");
+  const form=new FormData();
+  form.append("initData",telegram.initData);
+  form.append("image",blob,"vychitat-result.png");
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),30000);
+  try{
+    const response=await fetch(STORY_UPLOAD_URL,{
+      method:"POST",mode:"cors",credentials:"omit",body:form,signal:controller.signal
+    });
+    const body=await response.json().catch(()=>null);
+    if(!response.ok||!body?.ok||!/^https:\/\//.test(String(body.url||"")))
+      throw new Error(String(body?.error||"Не удалось загрузить картинку на сервер."));
+    return body.url;
+  }catch(e){
+    if(e?.name==="AbortError")throw new Error("Сервер не ответил за 30 секунд.");
+    throw e;
+  }finally{clearTimeout(timeout);}
+}
+async function shareStory() {
+  if(!currentState?.complete||requestBusy)return;
+  const button=el("share-story-btn"),status=el("share-story-status");
+  status.textContent="";
+  status.classList.remove("status-error");
+  if(typeof telegram?.shareToStory!=="function"||
+     (typeof telegram?.isVersionAtLeast==="function"&&!telegram.isVersionAtLeast("7.8"))){
+    status.textContent="Публикация сториз недоступна в этой версии Telegram. Обнови приложение.";
+    status.classList.add("status-error");
+    return;
+  }
+  requestBusy=true;
+  button.disabled=true;
+  const original=button.innerHTML;
+  button.textContent="Готовлю картинку…";
+  try{
+    const image=await buildStoryPoster();
+    button.textContent="Загружаю для Telegram…";
+    const url=await uploadStoryPoster(image);
+    // Telegram itself opens the native Stories editor; posting is always the user's action.
+    // Clickable link widgets are only available to Telegram Premium accounts.
+    telegram.shareToStory(url,{
+      text:STORY_COPY,
+      widget_link:{url:STORY_CHANNEL_URL,name:"вы́Читать"}
+    });
+    status.textContent="Редактор сториз откроется в Telegram. Проверь картинку и нажми «Опубликовать».";
+  }catch(e){
+    status.textContent=String(e?.message||"Не удалось подготовить сториз. Попробуй ещё раз.");
+    status.classList.add("status-error");
+  }finally{
+    button.disabled=false;
+    button.innerHTML=original;
+    requestBusy=false;
+  }
+}
+
 el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
 el("check-subscription-btn").addEventListener("click",checkSubscription);
 el("share-result-btn").addEventListener("click",()=>{
@@ -531,6 +641,7 @@ el("share-result-btn").addEventListener("click",()=>{
   show("share-screen");
 });
 el("share-send-btn").addEventListener("click",shareResult);
+el("share-story-btn").addEventListener("click",shareStory);
 el("view-stats-btn").addEventListener("click",()=>show("statistics-screen"));
 ["stats-back-btn","share-back-btn","completed-result-btn"].forEach(id=>el(id).addEventListener("click",renderFinish));
 telegram?.BackButton?.onClick(()=>renderFinish());
