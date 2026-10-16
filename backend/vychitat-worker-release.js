@@ -743,18 +743,37 @@ async function adminAction(env,body) {
 }
 
 
-/* Telegram story media: private R2 storage, public unguessable HTTPS URLs.
- * Only users with a completed attempt can upload their own poster.
- * No additional D1 tables, public bucket domain or secrets are required.
+/* Telegram story media: temporary JPG in the ALREADY-CONNECTED Cloudflare D1.
+ * This avoids activating paid/billing-enabled R2. Short-lived story snapshots
+ * use unguessable URLs and are removed during new uploads after 72 hours.
+ * This uses a NEW table and does not touch any quiz answers or score tables.
  */
-const STORY_MAX_BYTES=6*1024*1024;
+const STORY_MAX_BYTES=700000; // JPEG <= 700 KB, base64 < 1 MB, below D1 2 MB row limit
+const STORY_MAX_ROWS=500;     // protect the quiz database's 500 MB free tier
+const STORY_RETENTION_SECONDS=3*86400;
+const STORY_TABLE_SQL="CREATE TABLE IF NOT EXISTS mini_story_cards ("+
+  "key TEXT PRIMARY KEY, telegram_id INTEGER NOT NULL, edition_id TEXT NOT NULL,"+
+  "score INTEGER NOT NULL, content_b64 TEXT NOT NULL, created_at INTEGER NOT NULL)";
 function storyErrorResponse(e,origin) {
   const status=Number.isInteger(e?.status)?e.status:500;
   return replyJSON({ok:false,error:status>=500?'Не удалось подготовить сториз. Попробуй позже.':String(e.message||'Ошибка')},status,origin);
 }
+function storyToBase64(buffer) {
+  const bytes=new Uint8Array(buffer);
+  const parts=[];
+  for(let i=0;i<bytes.length;i+=16384){
+    parts.push(String.fromCharCode(...bytes.subarray(i,Math.min(bytes.length,i+16384))));
+  }
+  return btoa(parts.join(''));
+}
+function storyFromBase64(base64) {
+  const str=atob(base64);
+  const out=new Uint8Array(str.length);
+  for(let i=0;i<str.length;i++)out[i]=str.charCodeAt(i);
+  return out;
+}
 async function uploadStoryPoster(request,env,origin) {
   if(!ORIGINS.has(origin))throw err('Недоверенное приложение',403);
-  if(!env.STORY_R2)throw err('Хранилище сториз ещё не подключено. Попроси администратора проверить STORY_R2.',503);
   if(!String(request.headers.get('content-type')||'').toLowerCase().startsWith('multipart/form-data'))
     throw err('Неверный формат изображения',415);
   const declared=Number(request.headers.get('content-length')||0);
@@ -766,36 +785,54 @@ async function uploadStoryPoster(request,env,origin) {
   if(isPublic(env)&&!draftIsReady(run.questions))throw err('Выпуск готовится',503);
   const answers=await answersFor(env.DB,run,user);
   if(answers.length!==QCOUNT)throw err('Сначала закончи тест, чтобы поделиться результатом',403);
+  const score=answers.filter(a=>a.correct).length;
   const file=form.get('image');
   if(!file||typeof file.arrayBuffer!=='function'||typeof file.size!=='number'||
-     file.size<500||file.size>STORY_MAX_BYTES||file.type!=='image/png')
-    throw err('Нужна PNG-картинка размером не больше 6 МБ',413);
+     file.size<500||file.size>STORY_MAX_BYTES||file.type!=='image/jpeg')
+    throw err('Нужна JPG-картинка размером до 700 КБ',413);
   const buffer=await file.arrayBuffer();
   const bytes=new Uint8Array(buffer);
-  const pngHeader=[137,80,78,71,13,10,26,10];
-  if(pngHeader.some((byte,i)=>bytes[i]!==byte)||new DataView(buffer).getUint32(16)!==1080||
-      new DataView(buffer).getUint32(20)!==1920)
-    throw err('Некорректная карточка сториз (ожидается 1080×1920 PNG)',422);
-  // Random URL keeps the private per-user image unguessable.
-  const key='stories/'+crypto.randomUUID().replaceAll('-','')+'.png';
-  await env.STORY_R2.put(key,buffer,{
-    httpMetadata:{contentType:'image/png'},
-    customMetadata:{edition:run.id.slice(0,120),expires:'30d'},
-  });
-  return {ok:true,url:new URL('/story-media/'+key.split('/')[1],request.url).toString()};
+  if(bytes[0]!==0xff||bytes[1]!==0xd8||bytes[2]!==0xff||
+     bytes[bytes.length-2]!==0xff||bytes[bytes.length-1]!==0xd9)
+    throw err('Неверный формат JPEG',422);
+  // Lazily install a separate auxiliary table; no manual D1 migrations needed.
+  await env.DB.exec(STORY_TABLE_SQL);
+  await env.DB.prepare("DELETE FROM mini_story_cards WHERE created_at < ?")
+    .bind(timestamp()-STORY_RETENTION_SECONDS).run();
+  // A retry of the same result reuses the same URL, protecting storage quota.
+  const existing=await env.DB.prepare(
+    "SELECT key FROM mini_story_cards WHERE telegram_id=? AND edition_id=? AND score=? AND created_at>=? ORDER BY created_at DESC LIMIT 1")
+    .bind(user.id,run.id,score,timestamp()-86400).first();
+  if(existing?.key)return {ok:true,url:new URL('/story-media/'+existing.key+'.jpg',request.url).toString()};
+  const count=await env.DB.prepare("SELECT COUNT(*) AS n FROM mini_story_cards").first();
+  if(Number(count?.n)>=STORY_MAX_ROWS)
+    throw err('Хранилище временно заполнено. Попробуй поделиться позже.',503);
+  const key=crypto.randomUUID().replaceAll('-','');
+  const base64=storyToBase64(buffer);
+  await env.DB.prepare(
+    "INSERT INTO mini_story_cards(key,telegram_id,edition_id,score,content_b64,created_at) VALUES(?,?,?,?,?,?)")
+    .bind(key,user.id,run.id,score,base64,timestamp()).run();
+  return {ok:true,url:new URL('/story-media/'+key+'.jpg',request.url).toString()};
 }
 async function serveStoryPoster(request,env,name) {
-  if(!env.STORY_R2)return new Response('Not available',{status:503});
-  if(!/^[a-f0-9]{32}\.png$/.test(name))return new Response('Not found',{status:404});
-  const key='stories/'+name;
-  const image=request.method==='HEAD'?await env.STORY_R2.head(key):await env.STORY_R2.get(key);
-  if(!image)return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
-  const headers=new Headers({
-    'content-type':'image/png','cache-control':'public, max-age=86400',
-    'content-disposition':'inline; filename="vychitat-result.png"',
-    'x-content-type-options':'nosniff','etag':image.httpEtag
-  });
-  return new Response(request.method==='HEAD'?null:image.body,{status:200,headers});
+  if(!/^[a-f0-9]{32}\.jpg$/.test(name))return new Response('Not found',{status:404});
+  const key=name.slice(0,-4);
+  // Only public images with random IDs; no Telegram ID or score leaks in URL.
+  let row;
+  try{row=await env.DB.prepare("SELECT content_b64,created_at FROM mini_story_cards WHERE key=?").bind(key).first();}
+  catch(e){
+    // Before first upload the optional media table does not exist yet.
+    if(/no such table/i.test(String(e.message||e)))return new Response('Not found',{status:404});
+    throw e;
+  }
+  if(!row||Number(row.created_at)<timestamp()-STORY_RETENTION_SECONDS)
+    return new Response('Not found',{status:404,headers:{'cache-control':'no-store'}});
+  const headers={
+    'content-type':'image/jpeg','cache-control':'public, max-age=3600',
+    'content-disposition':'inline; filename="vychitat-result.jpg"',
+    'x-content-type-options':'nosniff'
+  };
+  return new Response(request.method==='HEAD'?null:storyFromBase64(row.content_b64),{status:200,headers});
 }
 
 export default {
