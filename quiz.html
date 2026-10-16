@@ -613,10 +613,13 @@ async function shareStory() {
     const url=await uploadStoryPoster(image);
     // Telegram itself opens the native Stories editor; posting is always the user's action.
     // Clickable link widgets are only available to Telegram Premium accounts.
-    telegram.shareToStory(url,{
-      text:STORY_COPY,
-      widget_link:{url:STORY_CHANNEL_URL,name:"вы́Читать"}
-    });
+    const storyParams={text:STORY_COPY};
+    // Telegram permits clickable Story links only for Premium accounts.
+    // Do not request a link widget for regular accounts: they can still share
+    // the same image with the printed t.me/posttsop address at its bottom.
+    if(telegram?.initDataUnsafe?.user?.is_premium===true)
+      storyParams.widget_link={url:STORY_CHANNEL_URL,name:"вы́Читать"};
+    telegram.shareToStory(url,storyParams);
     status.textContent="Редактор сториз откроется в Telegram. Проверь картинку и нажми «Опубликовать».";
   }catch(e){
     status.textContent=String(e?.message||"Не удалось подготовить сториз. Попробуй ещё раз.");
