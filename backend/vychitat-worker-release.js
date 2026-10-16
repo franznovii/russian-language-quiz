@@ -806,11 +806,12 @@ async function uploadStoryPoster(request,env,origin) {
   await env.DB.exec(STORY_TABLE_SQL);
   await env.DB.prepare("DELETE FROM mini_story_cards WHERE created_at < ?")
     .bind(timestamp()-STORY_RETENTION_SECONDS).run();
-  // A retry of the same result reuses the same URL, protecting storage quota.
-  const existing=await env.DB.prepare(
-    "SELECT key FROM mini_story_cards WHERE telegram_id=? AND edition_id=? AND score=? AND created_at>=? ORDER BY created_at DESC LIMIT 1")
-    .bind(user.id,run.id,score,timestamp()-86400).first();
-  if(existing?.key)return {ok:true,url:new URL('/story-media/'+existing.key+'.jpg',request.url).toString()};
+  // Each click captures the current poster instead of returning an older JPEG.
+  // Delete only this user's cached Story image(s) for the active edition;
+  // other participants and quiz answers are not affected.
+  await env.DB.prepare(
+    "DELETE FROM mini_story_cards WHERE telegram_id=? AND edition_id=?"
+  ).bind(user.id,run.id).run();
   const count=await env.DB.prepare("SELECT COUNT(*) AS n FROM mini_story_cards").first();
   if(Number(count?.n)>=STORY_MAX_ROWS)
     throw err('Хранилище временно заполнено. Попробуй поделиться позже.',503);
