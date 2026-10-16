@@ -194,3 +194,38 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   background-repeat: no-repeat;
   background-color: var(--paper);
 }
+
+/* Story sharing: variant B copy below the approved poster.
+   No transformations or extra overlays on the original artwork. */
+#share-screen .share-owner-copy{
+  margin:15px 0 0;
+  padding:0 2px;
+  color:var(--ink);
+  font:16px/1.38 Georgia,"Times New Roman",serif;
+}
+#share-screen #share-send-btn{
+  margin-top:15px;
+}
+#share-screen #share-story-btn{
+  margin-top:9px;
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-left:15px;
+  padding-right:15px;
+  background:#f3f0e8;
+  font-size:17px;
+}
+#share-screen .share-story-status{
+  font:12px/1.42 Arial,sans-serif;
+  color:#56524c;
+  margin:8px 0 0;
+  min-height:0;
+}
+#share-screen .share-story-status:empty{
+  display:none;
+}
+#share-screen .share-story-status.status-error{
+  color:#9e1d20;
+}
