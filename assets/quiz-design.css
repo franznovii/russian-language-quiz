@@ -159,15 +159,6 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
   font-size:11px;
   line-height:1.15;
 }
-.page[data-screen="share-screen"] .share-card .share-subtitle{
-  position:relative;
-  z-index:1;
-  max-width:70%;
-  font-size:11px;
-  margin:6px 0 0 -7px;
-  padding:4px 7px;
-  background:rgba(238,234,227,.85);
-}
 @media(max-width:350px){
   .page[data-screen="share-screen"] .share-card .share-comment{
     font-size:12px;
