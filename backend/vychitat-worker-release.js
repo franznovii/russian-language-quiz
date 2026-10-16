@@ -767,7 +767,8 @@ async function uploadStoryPoster(request,env,origin) {
   const answers=await answersFor(env.DB,run,user);
   if(answers.length!==QCOUNT)throw err('Сначала закончи тест, чтобы поделиться результатом',403);
   const file=form.get('image');
-  if(!(file instanceof File)||file.size<500||file.size>STORY_MAX_BYTES||file.type!=='image/png')
+  if(!file||typeof file.arrayBuffer!=='function'||typeof file.size!=='number'||
+     file.size<500||file.size>STORY_MAX_BYTES||file.type!=='image/png')
     throw err('Нужна PNG-картинка размером не больше 6 МБ',413);
   const buffer=await file.arrayBuffer();
   const bytes=new Uint8Array(buffer);
