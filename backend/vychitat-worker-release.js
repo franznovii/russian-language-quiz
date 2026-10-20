@@ -83,6 +83,49 @@ async function telegramUser(raw, token) {
   if (!Number.isSafeInteger(user?.id) || user.id<=0) throw err('Некорректный идентификатор пользователя',401);
   return user;
 }
+
+/**
+ * Browser fallback: a signed, anonymous negative participant ID.
+ * Positive IDs belong to real Telegram users; negative IDs are browser-only.
+ * HMAC is derived from the existing server-side BOT_TOKEN and never exposed.
+ * Browser storage is only a convenience: clearing it creates a new identity.
+ */
+const BROWSER_SESSION_DAYS=365;
+async function browserSessionSignature(env,participantId,issuedAt) {
+  if(!env.BOT_TOKEN)throw err('Не настроен BOT_TOKEN',503);
+  const key=await crypto.subtle.importKey('raw',encoder.encode(env.BOT_TOKEN),
+    {name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const input=encoder.encode('vychitat-browser-v1|'+participantId+'|'+issuedAt);
+  const signature=await crypto.subtle.sign('HMAC',key,input);
+  return [...new Uint8Array(signature)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function createBrowserSession(env) {
+  if(!isPublic(env))throw err('Браузерный режим доступен только в публичном выпуске',403);
+  const run=await activeEdition(env.DB);
+  if(!draftIsReady(run.questions))throw err('Выпуск ещё готовится',503);
+  // 48-bit signed-safe random identifier, disjoint from positive Telegram IDs.
+  const random=crypto.randomUUID().replaceAll('-','').slice(0,12);
+  const participantId=-Math.max(1,Number.parseInt(random,16));
+  const issuedAt=timestamp();
+  const signed=await browserSessionSignature(env,participantId,issuedAt);
+  return {ok:true,browserToken:'b1.'+participantId+'.'+issuedAt+'.'+signed,
+    expiresAt:issuedAt+BROWSER_SESSION_DAYS*86400};
+}
+async function browserUser(env,token) {
+  if(!isPublic(env))throw err('Браузерный режим недоступен',403);
+  if(typeof token!=='string'||token.length>140)
+    throw err('Нет браузерной сессии',401);
+  const m=/^b1\.(-[1-9]\d{0,14})\.(\d{10})\.([a-f0-9]{64})$/.exec(token);
+  if(!m)throw err('Браузерная сессия недействительна',401);
+  const id=Number(m[1]),issued=Number(m[2]);
+  if(!Number.isSafeInteger(id)||id>=0||issued>timestamp()+60||
+     issued<timestamp()-BROWSER_SESSION_DAYS*86400)
+    throw err('Срок браузерной сессии истёк',401);
+  const expected=await browserSessionSignature(env,id,issued);
+  if(!authEqual(m[3],expected))throw err('Неверная подпись браузерной сессии',401);
+  return {id,first_name:'Гость',isBrowser:true};
+}
+
 function validateQuestions(input) {
   if (!Array.isArray(input)||input.length!==QCOUNT) throw err('Нужно ровно шесть вопросов');
   const seen = new Set();
@@ -223,6 +266,7 @@ async function stateFor(db,run,user) {
       {id:q.id,text:q.text,description:q.description,options:q.options,multiple:q.correct.length>1,timeSeconds:q.timeSeconds}),
     answers,activeTimer:timer?{questionId:next.id,deadlineMs:Number(timer.deadline_at),durationSec:next.timeSeconds}:null,
     complete,score:complete?answers.filter(a=>a.correct).length:null,resultComment,statistics:null,
+    isBrowser:user.isBrowser===true,
     subscriptionStatus:complete?'checking':'not_finished',statsReady,statisticsAt:statsAtLabel(run.statsAt)};
 }
 async function openFor(db,run,user) {
@@ -351,6 +395,13 @@ async function dispatchEveningStats(env,limit=20) {
 
 async function applyGate(env,run,user,state) {
   if (!state.complete) return state;
+  if(user.isBrowser===true) {
+    // Telegram-only membership cannot be verified for an anonymous web visitor.
+    // Release the same percentages at the SAME 19:00 gate, never before.
+    state.subscriptionStatus='browser';
+    if(state.statsReady)state.statistics=await publicStatistics(env.DB,run);
+    return state;
+  }
   state.subscriptionStatus=await getMembership(env,user.id);
   if (state.subscriptionStatus==='member'&&state.statsReady) state.statistics=await publicStatistics(env.DB,run);
   return state;
@@ -371,14 +422,21 @@ async function share(env,run,user) {
   return {ok:true,shareId:record.id};
 }
 async function callMini(env,body) {
-  const user=await telegramUser(body?.initData,env.BOT_TOKEN);
+  const action=String(body?.action||'');
+  if(action==='browserSession')return createBrowserSession(env);
+  // Never treat an invalid Telegram initData as a browser user.
+  const user=typeof body?.initData==='string'&&body.initData.length
+    ? await telegramUser(body.initData,env.BOT_TOKEN)
+    : await browserUser(env,body?.browserToken);
   const mode=String(env.ACCESS_MODE||'pilot').toLowerCase();
   if (!['pilot','public'].includes(mode)) throw err('Неверная настройка ACCESS_MODE',503);
   if (mode==='pilot'&&String(user.id)!==String(env.TEST_CHAT_ID||'')) throw err('Сейчас тест доступен только администратору',403);
-  const action=String(body?.action||'');
   const run=await activeEdition(env.DB);
   if (mode==='public'&&!draftIsReady(run.questions)) throw err('Выпуск готовится. Попробуй позже.',503);
-  if (action==='share') return share(env,run,user);
+  if (action==='share') {
+    if(user.isBrowser)throw err('Из браузера поделись результатом через ссылку Telegram',403);
+    return share(env,run,user);
+  }
   let state;
   if (action==='state'||action==='checkSubscription'||action==='expire') {
     await join(env.DB,run,user);
@@ -511,6 +569,8 @@ async function handleAdminCommand(env,chatId,raw) {
         '\n'+(sheet?'Обновлено в таблице: ':'Рассчитано: ')+updatedAt+' (МСК)'+
         '\n\nНачали: '+report.started+
         '\nЗавершили: '+report.completed+'\nНе завершили: '+report.incomplete+
+        '\nЧерез Telegram: '+report.telegramStarted+' (завершили '+report.telegramCompleted+')'+
+        '\nЧерез браузер: '+report.browserStarted+' (завершили '+report.browserCompleted+')'+
         '\nСредний балл: '+(report.average===null?'—':report.average)+
         '\n\nПо вопросам:\n'+byQuestion+
         '\n\nРаспределение баллов:\n'+dist+
@@ -639,7 +699,11 @@ async function adminReport(db,runId=null) {
   const dist=Array(7).fill(0);
   for (const m of finished) dist[[...m.values()].filter(r=>r.correct).length]++;
   const average=finished.length?Number((finished.reduce((sum,m)=>sum+[...m.values()].filter(r=>r.correct).length,0)/finished.length).toFixed(2)):null;
+  const browserStarted=[...users.keys()].filter(id=>id.startsWith('-')).length;
+  const browserCompleted=[...users].filter(([id,answers])=>id.startsWith('-')&&answers.size===QCOUNT).length;
   return {ok:true,runId:run.id,started:users.size,completed:finished.length,incomplete:users.size-finished.length,average,
+    browserStarted,browserCompleted,telegramStarted:users.size-browserStarted,
+    telegramCompleted:finished.length-browserCompleted,
     statisticsAt:statsAtLabel(run.statsAt),perQuestion,distribution:dist};
 }
 async function sendInvitations(env,limit=20) {
