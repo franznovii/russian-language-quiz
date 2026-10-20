@@ -68,7 +68,7 @@
         <section class="mini-screen poster-screen" id="connect-screen">
       <div class="poster-artwork"><img src="./assets/intro-poster-art.webp" alt="вы́Читать. Русский на практике. Шесть вопросов, чтобы проверить себя и вспомнить главное." width="941" height="1384" fetchpriority="high"></div>
       <div class="poster-controls">
-        <div class="notice" id="telegram-notice" hidden>Открой тест из кнопки нашего Telegram-бота: в обычном браузере проверить участника невозможно.</div>
+        <div class="notice" id="telegram-notice" hidden>Браузерный режим: можно пройти тест без Telegram. Попытка сохранится в этом браузере; при очистке его данных или на другом устройстве появится новая попытка.</div>
         <button class="primary-btn poster-cta" id="connect-btn" type="button"><span class="poster-cta-text">Пройти тест</span><span class="poster-cta-arrow" aria-hidden="true">→</span></button>
         <div class="loader poster-status" id="connect-status" role="status" aria-live="polite"></div>
         <div class="poster-meta"><span>6 вопросов</span><span class="poster-dot">·</span><span>таймер на вопрос</span><span class="poster-dot">·</span><span>статистика после 19:00</span></div>
@@ -231,34 +231,79 @@ function show(screen){
 }
 function logError(id,message){el(id).textContent=message;el(id).classList.add("status-error")}
 const CLOUDFLARE_API = "https://vychitat.fr-novii.workers.dev/api";
-async function call(action,payload){
-  if(!telegram?.initData) throw new Error("Открой тест внутри Telegram.");
+const BROWSER_SESSION_KEY="vychitat-browser-quiz-session-v1";
+let browserSessionToken=null;
+function readBrowserSession(){
+  try{return localStorage.getItem(BROWSER_SESSION_KEY)||null}catch(_){return null}
+}
+function saveBrowserSession(token){
+  try{localStorage.setItem(BROWSER_SESSION_KEY,token)}catch(_){}
+}
+function clearBrowserSession(){
+  browserSessionToken=null;
+  try{localStorage.removeItem(BROWSER_SESSION_KEY)}catch(_){}
+}
+async function apiPost(data){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),15000);
   try{
     const response=await fetch(CLOUDFLARE_API,{
       method:"POST",mode:"cors",credentials:"omit",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action,initData:telegram.initData,payload:payload||null}),
-      signal:controller.signal
+      body:JSON.stringify(data),signal:controller.signal
     });
-    const data=await response.json();
-    if(!response.ok||!data?.ok)throw new Error(String(data?.error||"Ошибка сервера"));
-    return data;
+    const result=await response.json().catch(()=>null);
+    if(!response.ok||!result?.ok){
+      const e=new Error(String(result?.error||"Ошибка сервера"));
+      e.status=response.status;
+      throw e;
+    }
+    return result;
   }catch(e){
     if(e?.name==="AbortError")throw new Error("Сервер не ответил за 15 секунд.");
     throw e;
   }finally{clearTimeout(timeout)}
 }
-async function initialize(){
-  if(!telegram?.initData){
-    el("telegram-notice").hidden=false;
-    logError("connect-status","Открой страницу через кнопку Telegram-бота.");return;
+async function createBrowserSession(){
+  const response=await apiPost({action:"browserSession"});
+  if(typeof response.browserToken!=="string"||
+     !/^b1\.-[1-9]\d{0,14}\.\d{10}\.[a-f0-9]{64}$/.test(response.browserToken))
+    throw new Error("Не удалось получить браузерную сессию.");
+  browserSessionToken=response.browserToken;
+  saveBrowserSession(browserSessionToken);
+}
+async function call(action,payload,retried=false){
+  const inTelegram=Boolean(telegram?.initData);
+  if(!inTelegram){
+    if(!browserSessionToken)browserSessionToken=readBrowserSession();
+    if(!browserSessionToken)await createBrowserSession();
   }
+  try{
+    return await apiPost({
+      action,initData:inTelegram?telegram.initData:null,
+      browserToken:inTelegram?null:browserSessionToken,
+      payload:payload||null
+    });
+  }catch(e){
+    // Expired or invalid anonymous token: renew it once. Never retry other
+    // errors or a submitted answer that the server may already have saved.
+    if(!inTelegram&&!retried&&e.status===401){
+      clearBrowserSession();
+      await createBrowserSession();
+      return call(action,payload,true);
+    }
+    throw e;
+  }
+}
+async function initialize(){
+  const inTelegram=Boolean(telegram?.initData);
+  el("telegram-notice").hidden=inTelegram;
   el("connect-btn").disabled=true;
   el("connect-screen").classList.add("is-loading");
   el("connect-status").classList.remove("status-error");
-  el("connect-status").textContent="Проверяю Telegram и загружаю вопросы…";
+  el("connect-status").textContent=inTelegram
+    ?"Проверяю Telegram и загружаю вопросы…"
+    :"Подключаю браузерную попытку и загружаю вопросы…";
   show("loading-screen");
   try{
     currentState=await call("state");
@@ -436,6 +481,12 @@ function renderFinish(){stopClock();
       const bad=document.createElement("div");bad.className="stats-bad";bad.style.flex="1";
       track.append(good,bad);outer.append(head,track);stats.appendChild(outer);
     });
+  } else if(currentState.isBrowser===true) {
+    // Browser visitors have no Telegram ID to verify channel membership.
+    // The server releases their aggregated percentages only at the usual time.
+    pendingBox.hidden=false;
+    pendingBox.textContent="Общая статистика будет доступна "+statisticsWhen()+
+      ". Открой эту страницу позже в том же браузере.";
   } else if(currentState.subscriptionStatus==="member" && !currentState.statsReady) {
     pendingBox.hidden=false;
     pendingBox.textContent="Подписка на вы́Читать подтверждена. Общие итоги будут доступны "+
@@ -460,7 +511,7 @@ function renderFinish(){stopClock();
   show("finish-screen");
 }
 function openTelegram(url){
-  if(telegram?.openTelegramLink) telegram.openTelegramLink(url);
+  if(telegram?.initData&&telegram?.openTelegramLink) telegram.openTelegramLink(url);
   else window.open(url,"_blank","noopener,noreferrer");
 }
 async function checkSubscription(){
@@ -495,7 +546,7 @@ async function shareResult(){
   button.disabled=true;
   button.textContent="Готовлю сообщение…";
   try{
-    if(typeof telegram?.shareMessage==="function"){
+    if(telegram?.initData&&typeof telegram?.shareMessage==="function"){
       const prepared=await call("share");
       if(prepared?.shareId){
         telegram.shareMessage(prepared.shareId);
@@ -647,6 +698,7 @@ el("share-result-btn").addEventListener("click",()=>{
 });
 el("share-send-btn").addEventListener("click",shareResult);
 el("share-story-btn").addEventListener("click",shareStory);
+if(!telegram?.initData)el("share-story-btn").hidden=true;
 el("view-stats-btn").addEventListener("click",()=>show("statistics-screen"));
 ["stats-back-btn","share-back-btn","completed-result-btn"].forEach(id=>el(id).addEventListener("click",renderFinish));
 telegram?.BackButton?.onClick(()=>renderFinish());
