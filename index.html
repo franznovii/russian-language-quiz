@@ -9,10 +9,11 @@
     const quizUrl = new URL("./quiz.html", window.location.href);
     quizUrl.search = window.location.search;
     quizUrl.hash = window.location.hash;
+    if(["quiz.libera.me","franznovii.github.io"].includes(quizUrl.hostname))quizUrl.protocol="https:";
     window.location.replace(quizUrl.href);
   </script>
 </head>
 <body>
-  <p><a href="./quiz.html">Открыть тест по русскому языку</a></p>
+  <p><a href="https://quiz.libera.me/quiz.html">Открыть тест по русскому языку</a></p>
 </body>
 </html>
