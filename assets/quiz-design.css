@@ -132,7 +132,7 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
    Change sizing only; retain existing fonts, score and share controls. */
 .page[data-screen="share-screen"] .share-card {
   aspect-ratio: 505 / 719;
-  background-size: 300% auto;
+  background-size: 304% auto;
   background-position: right top;
   background-repeat: no-repeat;
 }
@@ -185,7 +185,7 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
    collage when the subscription/statistics content makes this page taller.
    The rightmost third of folk-collage.png belongs to this screen. */
 .page[data-screen="finish-screen"] .scene-art {
-  background-size: 300% auto;
+  background-size: 304% auto;
   background-position: right top;
   background-repeat: no-repeat;
   background-color: var(--paper);
@@ -225,3 +225,6 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
 #share-screen .share-story-status.status-error{
   color:#9e1d20;
 }
+
+/* The third collage panel starts with a white separator. Crop that gutter
+   with a small uniform zoom; keep the portrait at its intrinsic proportions. */
