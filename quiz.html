@@ -298,6 +298,32 @@ async function call(action,payload,retried=false){
     throw e;
   }
 }
+async function connectionDiagnostics(){
+  // Read-only probes. Never send Telegram data, tokens or participant answers.
+  async function probe(url,options){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),5000);
+    try{
+      const response=await fetch(url,{...options,credentials:"omit",cache:"no-store",signal:controller.signal});
+      return response.type==="opaque"?"ответ":String(response.status);
+    }catch(_){return "нет ответа"}
+    finally{clearTimeout(timeout)}
+  }
+  try{
+    const healthUrl=new URL("/",CLOUDFLARE_API);
+    healthUrl.searchParams.set("connection_check",String(Date.now()));
+    const [health,api]=await Promise.all([
+      probe(healthUrl.href,{method:"GET",mode:"no-cors"}),
+      probe(CLOUDFLARE_API,{method:"POST",mode:"cors",
+        headers:{"Content-Type":"text/plain;charset=UTF-8"},
+        body:JSON.stringify({action:"connectionCheck"})})
+    ]);
+    return "D2 · "+window.location.origin+" · GET: "+health+" · API: "+api+
+      " · "+(telegram?.initData?"Telegram":"браузер")+
+      (telegram?.platform?" / "+telegram.platform:"");
+  }catch(_){return "D2 · диагностика недоступна"}
+}
+
 async function initialize(){
   const inTelegram=Boolean(telegram?.initData);
   el("telegram-notice").hidden=inTelegram;
@@ -311,7 +337,16 @@ async function initialize(){
   try{
     currentState=await call("state");
     showInitialState();
-  }catch(e){show("connect-screen");logError("connect-status",String(e.message||e))}
+  }catch(e){
+    show("connect-screen");
+    const message=String(e.message||e);
+    logError("connect-status",message);
+    if(!e.status){
+      el("connect-status").textContent=message+" · Проверяю соединение…";
+      const diagnostic=await connectionDiagnostics();
+      logError("connect-status",message+"\n"+diagnostic);
+    }
+  }
   finally{el("connect-btn").disabled=false;el("connect-screen").classList.remove("is-loading")}
 }
 function showInitialState(){
