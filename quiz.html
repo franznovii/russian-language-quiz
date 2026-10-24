@@ -145,8 +145,8 @@
       </div>
       <p class="share-owner-copy">Мой результат в тесте канала вы́Читать. А ты справишься лучше?</p>
       <button class="primary-btn" id="share-send-btn" type="button">Поделиться в Telegram <span>↗</span></button>
-      <button class="secondary-mini-btn" id="share-story-btn" type="button">Поделиться в сториз <span aria-hidden="true">↗</span></button>
       <p id="share-story-status" class="share-story-status" role="status" aria-live="polite"></p>
+      <button class="secondary-mini-btn" id="share-story-btn" type="button">Поделиться в сториз <span aria-hidden="true">↗</span></button>
       <button class="secondary-mini-btn" id="share-back-btn" type="button">Назад к результату</button>
     </section>
     <section class="mini-screen" id="completed-screen" hidden>
@@ -695,48 +695,76 @@ async function uploadStoryPoster(blob) {
     throw e;
   }finally{clearTimeout(timeout);}
 }
+let preparedStory=null;
+function resetStoryPreparation(){
+  preparedStory=null;
+  el("share-story-btn").textContent="Поделиться в сториз ↗";
+  el("share-story-status").textContent="";
+  el("share-story-status").classList.remove("status-error");
+}
+function storyStatus(message,isError=false){
+  const status=el("share-story-status");
+  status.textContent=message;
+  status.classList.toggle("status-error",isError);
+}
+function revealStoryStatus(){
+  el("share-story-status").scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function nativeStoryParams(){
+  const params={text:STORY_COPY};
+  if(telegram?.initDataUnsafe?.user?.is_premium===true)
+    params.widget_link={url:STORY_CHANNEL_URL,name:"вы́Читать"};
+  return params;
+}
 async function shareStory() {
   if(!currentState?.complete||requestBusy)return;
-  const button=el("share-story-btn"),status=el("share-story-status");
-  status.textContent="";
-  status.classList.remove("status-error");
+  const button=el("share-story-btn");
   if(typeof telegram?.shareToStory!=="function"||
      (typeof telegram?.isVersionAtLeast==="function"&&!telegram.isVersionAtLeast("7.8"))){
-    status.textContent="Публикация сториз недоступна в этой версии Telegram. Обнови приложение.";
-    status.classList.add("status-error");
+    storyStatus("Публикация сториз недоступна в этой версии Telegram. Обнови приложение.",true);
+    revealStoryStatus();
     return;
   }
+  // Android ignores this native event more than 10 seconds after a tap.
+  // Prepared media is handed off synchronously on a fresh, second tap.
+  if(preparedStory && Date.now()-preparedStory.createdAt<10*60*1000){
+    try{
+      telegram.shareToStory(preparedStory.url,nativeStoryParams());
+      storyStatus("Передаю картинку в редактор Telegram.");
+    }catch(e){
+      storyStatus("Не удалось открыть редактор сториз: "+String(e?.message||"попробуй ещё раз"),true);
+    }
+    revealStoryStatus();
+    return;
+  }
+  preparedStory=null;
   requestBusy=true;
   button.disabled=true;
-  const original=button.innerHTML;
   button.textContent="Готовлю картинку…";
+  storyStatus("Создаю картинку с твоим результатом…");
+  let stage="создать картинку";
   try{
     const image=await buildStoryPoster();
-    button.textContent="Загружаю для Telegram…";
+    stage="загрузить картинку";
+    button.textContent="Загружаю картинку…";
+    storyStatus("Загружаю картинку для Telegram…");
     const url=await uploadStoryPoster(image);
-    // Telegram itself opens the native Stories editor; posting is always the user's action.
-    // Clickable link widgets are only available to Telegram Premium accounts.
-    const storyParams={text:STORY_COPY};
-    // Telegram permits clickable Story links only for Premium accounts.
-    // Do not request a link widget for regular accounts: they can still share
-    // the same image with the printed t.me/posttsop address at its bottom.
-    if(telegram?.initDataUnsafe?.user?.is_premium===true)
-      storyParams.widget_link={url:STORY_CHANNEL_URL,name:"вы́Читать"};
-    telegram.shareToStory(url,storyParams);
-    status.textContent="Редактор сториз откроется в Telegram. Проверь картинку и нажми «Опубликовать».";
+    preparedStory={url,createdAt:Date.now()};
+    storyStatus("Картинка готова. Нажми «Открыть редактор сториз».");
   }catch(e){
-    status.textContent=String(e?.message||"Не удалось подготовить сториз. Попробуй ещё раз.");
-    status.classList.add("status-error");
+    storyStatus("Не удалось "+stage+": "+String(e?.message||"попробуй ещё раз"),true);
   }finally{
     button.disabled=false;
-    button.innerHTML=original;
+    button.textContent=preparedStory?"Открыть редактор сториз ↗":"Поделиться в сториз ↗";
     requestBusy=false;
+    revealStoryStatus();
   }
 }
 
 el("subscribe-btn").addEventListener("click",()=>openTelegram("https://t.me/posttsop"));
 el("check-subscription-btn").addEventListener("click",checkSubscription);
 el("share-result-btn").addEventListener("click",()=>{
+  resetStoryPreparation();
   const score=Number(currentState?.score)||0;
   const comment=String(currentState?.resultComment||jokes[score]||"Выпуск завершён.");
   el("share-score").textContent=String(score);
