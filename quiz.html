@@ -8,7 +8,7 @@
   <title>вы́Читать — Тест по русскому языку</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="./assets/vendor/html2canvas.min.js" defer></script>
-  <link rel="stylesheet" href="./assets/quiz-design.css?v=collage-gutter-crop-20261024">
+  <link rel="stylesheet" href="./assets/quiz-design.css?v=completed-sun-scrollbar-20261024">
 <style>
 /* DESIGN REVISION 2: clean controls. Screenshots of the original art included
    a tiny printed bot handle in the lower visual border. Cover ONLY that strip. */
@@ -221,6 +221,7 @@ function startClock(){
 }
 
 function show(screen){
+  document.documentElement.classList.toggle("completed-view",screen==="completed-screen");
   screens.forEach(s=>{el(s).hidden=s!==screen});
   document.querySelector('.page').dataset.screen=screen;
   document.querySelector('.page').classList.toggle('feedback-mode',screen==='question-screen'&&showingFeedback);
