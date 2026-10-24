@@ -609,11 +609,11 @@ async function shareResult(){
     // встроенные ссылки, используем его только как резервный вариант.
     const score=Number(currentState.score)||0;
     const resultComment=String(currentState.resultComment||jokes[score]||"Выпуск завершён.");
-    const message=resultComment+"\n\nЭто мой результат в тесте канала вы́Читать по русскому языку. У меня "+score+" из 6.\nА ты справишься лучше?";
+    const message=resultComment+"\n\nМой результат в тесте по русскому языку — "+score+" из 6.\nА ты справишься лучше?\n\nКанал вы́Читать: https://t.me/posttsop";
     // В устаревших версиях Telegram share/url не поддерживает inline-кнопки:
     // оставляем одну ссылку на тест, а комментарий берём из того же state.
     const share="https://t.me/share/url?url="+
-      encodeURIComponent("https://t.me/posttsop_test_bot?start=quiz")+
+      encodeURIComponent("https://quiz.libera.me/quiz.html")+
       "&text="+encodeURIComponent(message);
     openTelegram(share);
   }finally{
