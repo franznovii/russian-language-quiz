@@ -2,60 +2,17 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f5f1e9">
-  <meta name="description" content="Демонстрация Telegram Mini App для тестов по русскому языку от «вы́Читать».">
-  <title>Русский язык — вы́Читать</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="./app.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,follow">
+  <title>вы́Читать — Тест по русскому языку</title>
+  <script>
+    const quizUrl = new URL("./quiz.html", window.location.href);
+    quizUrl.search = window.location.search;
+    quizUrl.hash = window.location.hash;
+    window.location.replace(quizUrl.href);
+  </script>
 </head>
 <body>
-  <div class="page">
-    <header class="site-header">
-      <div class="wordmark">вы́<span>Читать</span><span class="mark-dot">.</span></div>
-      <div class="header-tag">ТЕСТЫ ПО РУССКОМУ</div>
-    </header>
-
-    <main id="app" aria-live="polite">
-      <section id="screen-intro" class="screen">
-        <div class="eyebrow"><span class="eyebrow-line"></span> Выпуск 01 · демоверсия</div>
-        <h1>Ты точно<br>это <em>знаешь?</em></h1>
-        <p class="lead">Шесть вопросов по русскому языку. Никаких таймеров, чужих ответов и поблажек.</p>
-        <div class="intro-visual" aria-hidden="true">
-          <div class="big-letter">Я</div>
-          <span class="visual-note">А как у тебя<br>с правилами?</span>
-          <span class="visual-star">✳</span>
-        </div>
-        <div class="intro-facts"><span>06 вопросов</span><span>1–2 минуты</span><span>Без таймера</span></div>
-        <button id="start-btn" class="primary-btn" type="button">Начать тест <span aria-hidden="true">↗</span></button>
-        <p class="disclaimer">Это пробная версия интерфейса. Ответы пока не сохраняются.</p>
-      </section>
-
-      <section id="screen-quiz" class="screen" hidden>
-        <div class="quiz-topline"><span id="question-counter">Вопрос 1 из 6</span><span>РУССКИЙ ЯЗЫК</span></div>
-        <div class="progress-track" role="progressbar" aria-label="Прогресс теста" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><div class="progress-fill" id="progress-fill"></div></div>
-        <div id="question-kind" class="eyebrow question-kind"></div>
-        <h2 id="question-title"></h2>
-        <p id="question-description" class="question-description" hidden></p>
-        <div id="choices" class="choices" role="group" aria-label="Варианты ответа"></div>
-        <div id="feedback" class="feedback" role="status" hidden></div>
-        <button id="answer-btn" class="primary-btn" type="button" disabled>Проверить ответ <span aria-hidden="true">→</span></button>
-        <p class="disclaimer">Можно отвечать в своём темпе. Вопросы не ограничены по времени.</p>
-      </section>
-
-      <section id="screen-result" class="screen" hidden>
-        <div class="eyebrow"><span class="eyebrow-line"></span> Результат теста</div>
-        <h1 id="result-title">Проверка окончена.</h1>
-        <div class="result-score"><strong id="score-value">0</strong><span>из 6</span></div>
-        <p id="result-message" class="lead"></p>
-        <div class="result-note"><strong>Что дальше?</strong><p>В полной версии здесь будут результаты, сохранение в Google Таблицу и общая статистика в процентах после 19:00.</p></div>
-        <button id="again-btn" class="primary-btn" type="button">Пройти ещё раз <span aria-hidden="true">↗</span></button>
-        <p class="disclaimer">Демо: результат не отправляется боту и не записывается в таблицу.</p>
-      </section>
-    </main>
-
-    <footer class="site-footer"><span>вы́Читать © 2026</span><span>Тест на внимательность</span></footer>
-  </div>
+  <p><a href="./quiz.html">Открыть тест по русскому языку</a></p>
 </body>
 </html>
