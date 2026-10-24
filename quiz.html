@@ -250,7 +250,9 @@ async function apiPost(data){
   try{
     const response=await fetch(CLOUDFLARE_API,{
       method:"POST",mode:"cors",credentials:"omit",
-      headers:{"Content-Type":"application/json"},
+      // A plain-text JSON body avoids an OPTIONS preflight in Telegram WebViews.
+      // The Worker still parses JSON and validates Origin and the session signature.
+      headers:{"Content-Type":"text/plain;charset=UTF-8"},
       body:JSON.stringify(data),signal:controller.signal
     });
     const result=await response.json().catch(()=>null);
