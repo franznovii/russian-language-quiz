@@ -9,10 +9,10 @@
  * Optional auto-edition: 0 7 * * 2 [Tuesday 10:00 Moscow; UTC; only when WEEKLY_ENABLED=yes].
  */
 const QCOUNT = 6;
-const BASE_PAGE = 'https://franznovii.github.io/russian-language-quiz/quiz.html';
+const BASE_PAGE = 'https://quiz.libera.me/quiz.html';
 const ORIGINS = new Set(['https://franznovii.github.io', 'https://quiz.libera.me']);
 const CHANNEL = '@posttsop';
-const BOT_LINK = 'https://t.me/posttsop_test_bot?start=quiz';
+const BOT_LINK = 'https://t.me/posttsop_test_bot?startapp';
 const WEBHOOK_ENDPOINT = 'https://vychitat.fr-novii.workers.dev/telegram';
 const PLACEHOLDER_PATTERN = /бла\s+бла|lorem\s+ipsum/i;
 function draftIsReady(questions) {
@@ -613,6 +613,17 @@ async function telegramUpdate(env,update) {
       catch(_){publicReady=false;}
     }
     const hasAccess=publicReady||String(message.from.id)===String(env.TEST_CHAT_ID||'');
+    // Repair old per-chat menu URLs on /start. Inline buttons in older
+    // messages cannot be rewritten here; the new message below uses HTTPS.
+    if(hasAccess){
+      try{
+        await telegram(env,'setChatMenuButton',{chat_id:message.chat.id,
+          menu_button:{type:'web_app',text:'Открыть тест',web_app:{url:BASE_PAGE}}});
+      }catch(e){
+        // A menu update failure must not prevent the fresh launch button.
+        console.warn('Could not refresh quiz menu:',String(e.message||e).slice(0,160));
+      }
+    }
     await telegram(env,'sendMessage',hasAccess?{
       chat_id:message.chat.id,
       text:'Привет! Это тест по русскому языку от канала <a href="https://t.me/posttsop">вы́Читать</a>.\n\nШесть вопросов, свой таймер на каждый и одна попытка.\n\nНажми кнопку, чтобы открыть приложение.',
