@@ -12,7 +12,6 @@
  * Сайт может связываться с мостом только с разрешённых origin.
  */
 const BRIDGE_ALLOWED_ORIGINS = [
-  'https://franznovii.github.io',
   'https://quiz.libera.me'
 ];
 

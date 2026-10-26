@@ -9,7 +9,7 @@
     const quizUrl = new URL("./quiz.html", window.location.href);
     quizUrl.search = window.location.search;
     quizUrl.hash = window.location.hash;
-    if(["quiz.libera.me","franznovii.github.io"].includes(quizUrl.hostname))quizUrl.protocol="https:";
+    if(quizUrl.hostname==="quiz.libera.me")quizUrl.protocol="https:";
     window.location.replace(quizUrl.href);
   </script>
 </head>

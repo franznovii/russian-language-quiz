@@ -16,7 +16,6 @@
  */
 
 const MINIAPP_ALLOWED_ORIGINS = Object.freeze([
-  "https://franznovii.github.io",
   "https://quiz.libera.me"
 ]);
 const MAX_INITDATA_LENGTH = 12000;

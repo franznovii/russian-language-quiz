@@ -20,7 +20,7 @@ function cfSendRedesignPilotButton() {
     throw new Error("В свойствах GAS некорректный TEST_CHAT_ID: нужен числовой ID личного чата");
   }
   const webAppUrl =
-    "https://franznovii.github.io/russian-language-quiz/pilot-cloudflare-redesign.html?pilot=design-20261012";
+    "https://quiz.libera.me/pilot-cloudflare-redesign.html?pilot=design-20261012";
   const payload = {
     chat_id: chatId,
     text: "«вы́Читать» · Проверка НОВОГО дизайна. Только для администратора. 6 вопросов, реальные таймеры и сохранение ответов в Cloudflare.",

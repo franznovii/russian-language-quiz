@@ -6,7 +6,7 @@
     // GitHub's custom-domain redirect may arrive over HTTP.
     // Upgrade before loading the app and preserve Telegram's full launch URL.
     if(window.location.protocol==="http:" &&
-       ["quiz.libera.me","franznovii.github.io"].includes(window.location.hostname)){
+       window.location.hostname==="quiz.libera.me"){
       window.__quizHttpsRedirecting=true;
       const secureUrl=new URL(window.location.href);
       secureUrl.protocol="https:";

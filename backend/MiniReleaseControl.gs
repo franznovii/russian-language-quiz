@@ -7,7 +7,7 @@
  * Переключение webhook / меню / приглашений требует предварительного
  * Script Property CF_RELEASE_APPROVED=YES и отдельного ручного запуска.
  */
-const CF_RELEASE_PAGE_URL = 'https://franznovii.github.io/russian-language-quiz/quiz.html';
+const CF_RELEASE_PAGE_URL = 'https://quiz.libera.me/quiz.html';
 
 function cfReleasePreflight() {
   miniRequireOwnerRun_();

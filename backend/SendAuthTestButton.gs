@@ -19,7 +19,7 @@ function sendAuthTestButton() {
   if (!/^[1-9][0-9]{3,15}$/.test(chatId)) {
     throw new Error('Добавь свой цифровой Telegram ID в Script Properties как TEST_CHAT_ID.');
   }
-  const testPageUrl = 'https://franznovii.github.io/russian-language-quiz/telegram-auth-test.html';
+  const testPageUrl = 'https://quiz.libera.me/telegram-auth-test.html';
   const payload = {
     chat_id: chatId,
     text: 'Тест Mini App «вы́Читать». Эта кнопка только для проверки личности в Telegram. Ответы не записываются.',

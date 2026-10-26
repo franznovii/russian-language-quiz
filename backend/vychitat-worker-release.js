@@ -10,7 +10,7 @@
  */
 const QCOUNT = 6;
 const BASE_PAGE = 'https://quiz.libera.me/quiz.html';
-const ORIGINS = new Set(['https://franznovii.github.io', 'https://quiz.libera.me']);
+const ORIGINS = new Set(['https://quiz.libera.me']);
 const CHANNEL = '@posttsop';
 const BOT_LINK = 'https://t.me/posttsop_test_bot?startapp';
 const WEBHOOK_ENDPOINT = 'https://vychitat.fr-novii.workers.dev/telegram';

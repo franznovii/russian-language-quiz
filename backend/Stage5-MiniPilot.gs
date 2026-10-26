@@ -19,8 +19,8 @@ const MAX_INITDATA_LENGTH = 12000;
 const INITDATA_MAX_AGE_SECONDS = 6 * 60 * 60;
 const MINI = Object.freeze({
   tz: "Europe/Moscow",
-  origins: ["https://franznovii.github.io", "https://quiz.libera.me"],
-  pagesUrl: "https://franznovii.github.io/russian-language-quiz/pilot-quiz.html",
+  origins: ["https://quiz.libera.me"],
+  pagesUrl: "https://quiz.libera.me/pilot-quiz.html",
   runSheet: "Мини_Выпуски",
   peopleSheet: "Мини_Участники",
   answersSheet: "Мини_Ответы",
