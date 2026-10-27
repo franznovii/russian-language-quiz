@@ -557,7 +557,11 @@ async function handleAdminCommand(env,chatId,raw) {
     }
     const byQuestion=report.perQuestion.map(q=>'Вопрос '+q.questionId+': '+q.correct+
       ' верно / '+q.incorrect+' неверно ('+q.correctPercent+'% / '+q.incorrectPercent+'%)').join('\n');
-    const dist=(sheet?.distribution||report.distribution).map((v,i)=>i+'/6: '+v).join(' · ');
+    const distribution=sheet?.distribution||report.distribution;
+    const dist=distribution.map((v,i)=>i+'/6: '+v).join(' · ');
+    const completed=distribution.reduce((sum,count)=>sum+count,0);
+    const distPercent=distribution.map((count,i)=>i+'/6 - '+
+      (completed?Math.round(100*count/completed):0)+'%').join('\n');
     const updatedAt=sheet?.updatedAt||statsAtLabel(timestamp());
     const note=sheet
       ?'Данные сохранены в Google Sheets → «Cloudflare_Отчёт».'
@@ -574,6 +578,7 @@ async function handleAdminCommand(env,chatId,raw) {
         '\nСредний балл: '+(report.average===null?'—':report.average)+
         '\n\nПо вопросам:\n'+byQuestion+
         '\n\nРаспределение баллов:\n'+dist+
+        '\n\nДля поста (% от завершивших):\n'+distPercent+
         '\n\n'+note,
       link_preview_options:{is_disabled:true},
       reply_markup:{inline_keyboard:[[{text:'Открыть Google-отчёт',url:'https://docs.google.com/spreadsheets/d/1A4D4fh9Bn8QO7jZGGvQsIWrTP-P36tqCKPi-IqjUWLM/edit#gid=1914646520'}]]}});
