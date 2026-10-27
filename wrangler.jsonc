@@ -1,0 +1,15 @@
+{
+  "name": "vychitat",
+  "main": "backend/vychitat-worker-release.js",
+  "account_id": "13282711f1f1e4c734eb2bf9a6482ab5",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": true,
+  "keep_vars": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vychitat-quiz-db",
+      "database_id": "494733ab-b9da-4b92-8479-2b68d2ad785f"
+    }
+  ]
+}
