@@ -711,10 +711,12 @@ function revealStoryStatus(){
   el("share-story-status").scrollIntoView({block:"nearest",behavior:"smooth"});
 }
 function nativeStoryParams(){
-  const params={text:STORY_COPY};
-  if(telegram?.initDataUnsafe?.user?.is_premium===true)
-    params.widget_link={url:STORY_CHANNEL_URL,name:"вы́Читать"};
-  return params;
+  // Ask the native editor to apply the link. Telegram itself checks Premium;
+  // launch data can be stale, so do not drop the widget based on its user flag.
+  return {
+    text:STORY_COPY+"\n\nКанал вы́Читать: "+STORY_CHANNEL_URL,
+    widget_link:{url:STORY_CHANNEL_URL,name:"вы́Читать"}
+  };
 }
 async function shareStory() {
   if(!currentState?.complete||requestBusy)return;
