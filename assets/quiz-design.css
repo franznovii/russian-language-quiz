@@ -229,8 +229,9 @@ h1,h2,h3,.primary-btn,.secondary-mini-btn,.share-mini-btn,.big-result,.stats-hea
 /* The third collage panel starts with a white separator. Crop that gutter
    with a small uniform zoom; keep the portrait at its intrinsic proportions. */
 
-/* Telegram desktop: keep this tall poster scrollable without a dark scrollbar gutter. */
-html.completed-view,
-html.completed-view body{scrollbar-width:none}
-html.completed-view::-webkit-scrollbar,
-html.completed-view body::-webkit-scrollbar{display:none;width:0;height:0}
+/* Telegram desktop: hide the document scrollbar on every screen while keeping
+   wheel, touch, keyboard scrolling and the sticky answer button available. */
+html,
+body{scrollbar-width:none}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{display:none;width:0;height:0}
